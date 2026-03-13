@@ -1,0 +1,180 @@
+{
+  "reviews_source": "C:\\Users\\alvin\\Downloads\\skripsi\\data\\processed\\archive\\2026-03-13_focus_v2\\reviews_clean.csv",
+  "n_reviews": 277195,
+  "lexicon_size": 60,
+  "whitelist_size": 19,
+  "n_missing_candidates_freq_ge_200": 331,
+  "top_20_missing_candidates": [
+    {
+      "token": "nya",
+      "freq": 41084
+    },
+    {
+      "token": "saat",
+      "freq": 9083
+    },
+    {
+      "token": "d",
+      "freq": 9011
+    },
+    {
+      "token": "dana",
+      "freq": 7469
+    },
+    {
+      "token": "cuma",
+      "freq": 6124
+    },
+    {
+      "token": "aneh",
+      "freq": 5181
+    },
+    {
+      "token": "cair",
+      "freq": 4968
+    },
+    {
+      "token": "lain",
+      "freq": 4924
+    },
+    {
+      "token": "puas",
+      "freq": 4740
+    },
+    {
+      "token": "sih",
+      "freq": 4226
+    },
+    {
+      "token": "laku",
+      "freq": 4219
+    },
+    {
+      "token": "dong",
+      "freq": 4015
+    },
+    {
+      "token": "tiba",
+      "freq": 3882
+    },
+    {
+      "token": "g",
+      "freq": 3865
+    },
+    {
+      "token": "suka",
+      "freq": 3476
+    },
+    {
+      "token": "beli",
+      "freq": 3406
+    },
+    {
+      "token": "atas",
+      "freq": 2929
+    },
+    {
+      "token": "biar",
+      "freq": 2869
+    },
+    {
+      "token": "maaf",
+      "freq": 2488
+    },
+    {
+      "token": "tau",
+      "freq": 2474
+    }
+  ],
+  "top_20_lexicon_sources_by_frequency": [
+    {
+      "source": "gak",
+      "freq_in_corpus": 27197
+    },
+    {
+      "source": "ga",
+      "freq_in_corpus": 25577
+    },
+    {
+      "source": "yg",
+      "freq_in_corpus": 25359
+    },
+    {
+      "source": "udah",
+      "freq_in_corpus": 14127
+    },
+    {
+      "source": "gk",
+      "freq_in_corpus": 12553
+    },
+    {
+      "source": "aja",
+      "freq_in_corpus": 12275
+    },
+    {
+      "source": "pake",
+      "freq_in_corpus": 9895
+    },
+    {
+      "source": "sy",
+      "freq_in_corpus": 7525
+    },
+    {
+      "source": "tp",
+      "freq_in_corpus": 6256
+    },
+    {
+      "source": "udh",
+      "freq_in_corpus": 5477
+    },
+    {
+      "source": "tdk",
+      "freq_in_corpus": 5275
+    },
+    {
+      "source": "kalo",
+      "freq_in_corpus": 5029
+    },
+    {
+      "source": "lg",
+      "freq_in_corpus": 4750
+    },
+    {
+      "source": "sya",
+      "freq_in_corpus": 3711
+    },
+    {
+      "source": "klo",
+      "freq_in_corpus": 3547
+    },
+    {
+      "source": "sdh",
+      "freq_in_corpus": 3471
+    },
+    {
+      "source": "tpi",
+      "freq_in_corpus": 3397
+    },
+    {
+      "source": "bgt",
+      "freq_in_corpus": 3287
+    },
+    {
+      "source": "trus",
+      "freq_in_corpus": 3033
+    },
+    {
+      "source": "dah",
+      "freq_in_corpus": 3024
+    }
+  ],
+  "ambiguous_sources_present": [
+    "aja",
+    "dr",
+    "sm"
+  ],
+  "outputs": {
+    "missing_candidates_csv": "C:\\Users\\alvin\\Downloads\\skripsi\\data\\resources\\normalization_missing_candidates_v2.csv",
+    "audit_report_json": "C:\\Users\\alvin\\Downloads\\skripsi\\data\\resources\\normalization_audit_v2.json"
+  }
+}

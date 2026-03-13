@@ -1,0 +1,33 @@
+# Environment & secrets
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# Training outputs and large artifacts
+models/
+data/raw/
+data/processed/archive/
+data/processed/*.csv
+data/processed/*.jsonl
+data/processed/*.json
+
+# Keep documentation folders under processed data if needed
+!data/processed/diamond/
+!data/processed/diamond/*.md
+
+# Logs and local outputs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store

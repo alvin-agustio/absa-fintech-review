@@ -1,0 +1,22 @@
+# Tokens in this list will not be normalized even if found in lexicon.
+# Keep one token per line, lowercase.
+
+limit
+paylater
+pinjol
+tenor
+cicilan
+dc
+cs
+otp
+akun
+aplikasi
+kredivo
+akulaku
+apk
+acc
+hp
+tgl
+ojk
+qris
+app

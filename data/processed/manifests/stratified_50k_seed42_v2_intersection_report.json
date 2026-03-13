@@ -1,0 +1,9 @@
+{
+  "manifest_50k_rows": 50000,
+  "intersection_rows": 48763,
+  "dropped_rows": 1237,
+  "retention_pct": 97.526,
+  "v1_50k_labeled_any": 43242,
+  "v2_intersection_labeled_any": 42313,
+  "v2_intersection_all_null": 6450
+}
