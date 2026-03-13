@@ -21,6 +21,8 @@ $loraDropout = 0.1
 $retrainCleanCsv = "data/processed/noise/clean_data.csv"
 $retrainBatchSize = 8
 $retrainLearningRate = 2e-5
+$retrainLoraBatchSize = 16
+$retrainLoraLearningRate = 2e-4
 
 $results = @()
 
@@ -124,6 +126,27 @@ foreach ($epochs in $epochsList) {
                 "--seed", $seed
             )
         $results += Read-Metrics -ModelType "retrained" -Epochs $epochs -OutputDir $retrainOutputDir
+
+        $retrainLoraOutputDir = "models/retrained_lora/epoch_$epochs"
+        Invoke-TrainingRun `
+            -Label "RETRAIN-LORA" `
+            -OutputDir $retrainLoraOutputDir `
+            -Arguments @(
+                "train_lora_filtered.py",
+                "--clean_csv", $retrainCleanCsv,
+                "--output_dir", $retrainLoraOutputDir,
+                "--max_length", $maxLength,
+                "--test_size", $testSize,
+                "--val_size", $valSize,
+                "--epochs", $epochs,
+                "--batch_size", $retrainLoraBatchSize,
+                "--lr", $retrainLoraLearningRate,
+                "--seed", $seed,
+                "--lora_r", $loraR,
+                "--lora_alpha", $loraAlpha,
+                "--lora_dropout", $loraDropout
+            )
+        $results += Read-Metrics -ModelType "retrained_lora" -Epochs $epochs -OutputDir $retrainLoraOutputDir
     }
 }
 

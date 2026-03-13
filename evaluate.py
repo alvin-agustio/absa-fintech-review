@@ -245,7 +245,7 @@ def collect_epoch_dirs(model_name: str) -> list[tuple[str, Path, int]]:
 def collect_epoch_results() -> pd.DataFrame:
     rows = []
 
-    for model_name in ["baseline", "lora", "retrained"]:
+    for model_name in ["baseline", "lora", "retrained", "retrained_lora"]:
         for source, epoch_dir, epochs in collect_epoch_dirs(model_name):
             metrics = resolve_metrics(epoch_dir)
             if metrics is None:
@@ -342,6 +342,7 @@ def main():
         "baseline": resolve_experiment_dir("baseline"),
         "lora": resolve_experiment_dir("lora"),
         "retrained": resolve_experiment_dir("retrained"),
+        "retrained_lora": resolve_experiment_dir("retrained_lora"),
     }
 
     results = {}
@@ -443,7 +444,7 @@ def main():
     print("[EVAL] Evaluation Summary:")
     print(json.dumps(results, indent=2, ensure_ascii=False))
 
-    for name in ["baseline", "lora", "retrained"]:
+    for name in ["baseline", "lora", "retrained", "retrained_lora"]:
         if name not in detailed_results:
             continue
         diagnostics = detailed_results[name].get("diagnostics")
@@ -466,7 +467,7 @@ def main():
         print("\n" + "=" * 70)
         print(f"{'Experiment':<15} {'Accuracy':>10} {'F1 Macro':>10} {'F1 Weight':>10} {'Time (s)':>10} {'Params':>15}")
         print("-" * 70)
-        for name in ["baseline", "lora", "retrained"]:
+        for name in ["baseline", "lora", "retrained", "retrained_lora"]:
             if name in results:
                 r = results[name]
                 time_display = display_or_na(r.get("training_time_seconds"), 2)
