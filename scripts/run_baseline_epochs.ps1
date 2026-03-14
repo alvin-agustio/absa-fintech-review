@@ -14,7 +14,7 @@ $epochsList = @(3, 5)
 foreach ($epochs in $epochsList) {
     $outputDir = "models/baseline/epoch_$epochs"
     Write-Host "[BASELINE] Running epoch=$epochs -> $outputDir"
-    & $python train_baseline.py `
+    & $python src/training/train_baseline.py `
         --input_csv $inputCsv `
         --model_name $modelName `
         --output_dir $outputDir `

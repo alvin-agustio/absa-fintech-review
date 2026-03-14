@@ -14,7 +14,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
-from preprocess import preprocess_text
+from src.data.preprocess import preprocess_text
 from config import APPS, ASPECTS, LANG, COUNTRY, DATA_PROCESSED, MODELS_DIR
 
 # ── PAGE CONFIG ───────────────────────────────────────────────────────
@@ -116,7 +116,7 @@ ASPECT_LABELS = {
 # ── LOAD MODEL (CACHED) ──────────────────────────────────────────────
 @st.cache_resource
 def load_predictor(model_dir: str):
-    from inference import ABSAPredictor
+    from src.inference import ABSAPredictor
     return ABSAPredictor(model_dir)
 
 

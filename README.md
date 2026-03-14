@@ -106,20 +106,46 @@ flowchart TD
 
 ```text
 .
-|- app.py                         # Streamlit dashboard
-|- config.py                      # central paths and configuration
-|- preprocess.py                  # review cleaning and normalization
-|- labeling.py                    # LLM-based silver labeling workflow
-|- train_baseline.py              # full fine-tuning pipeline
-|- train_lora.py                  # LoRA fine-tuning pipeline
-|- evaluate.py                    # experiment evaluation and comparison
-|- inference.py                   # inference helper for trained models
-|- detect_label_noise.py          # weak-label noise filtering utilities
-|- predict_mc_dropout.py          # uncertainty estimation utilities
-|- retrain_filtered.py            # retraining on filtered subsets
-|- scripts/                       # PowerShell and helper scripts
-|- docs/                          # project notes and execution docs
-|- data/                          # local datasets, manifests, annotation assets
+├── app.py                          # Streamlit dashboard (entry point)
+├── config.py                       # central paths and model configuration
+├── requirements.txt
+│
+├── src/                            # all pipeline Python source modules
+│   ├── inference.py                # ABSAPredictor class used by app.py
+│   ├── data/
+│   │   ├── preprocess.py           # review text cleaning and normalization
+│   │   ├── scrape_reviews.py       # Google Play scraper
+│   │   ├── resume_scrape.py        # incremental scrape resume helper
+│   │   └── labeling.py             # LLM-based silver labeling (Groq)
+│   ├── training/
+│   │   ├── train_baseline.py       # full fine-tuning pipeline
+│   │   ├── train_lora.py           # LoRA fine-tuning pipeline
+│   │   ├── train_lora_filtered.py  # LoRA on noise-filtered data
+│   │   └── retrain_filtered.py     # retraining on clean subset
+│   └── evaluation/
+│       ├── evaluate.py             # experiment comparison and metrics
+│       ├── detect_label_noise.py   # weak-label noise detection
+│       └── predict_mc_dropout.py   # MC Dropout uncertainty estimation
+│
+├── scripts/                        # execution runners and data pipeline scripts
+│   ├── run_baseline_epochs.ps1     # baseline epoch sweep
+│   ├── run_lora_epochs.ps1         # LoRA epoch sweep
+│   ├── run_training_experiments.ps1
+│   ├── build_v2_intersection.py    # build active v2 training dataset
+│   ├── audit_normalization_v2.py   # audit slang normalization coverage
+│   └── setup_digitalocean_gpu.sh
+│
+├── docs/                           # project documentation
+│   ├── PROJECT_STATUS.md
+│   ├── CONTEXT.md                  # active project context summary
+│   ├── DIAMOND_STANDARD_GUIDELINES.md
+│   ├── DIGITALOCEAN_GPU_SETUP.md
+│   └── EXECUTION_TASKLIST_UNTIL_EVALUATE.md
+│
+└── data/
+    ├── processed/                  # datasets, manifests, evaluation outputs
+    │   └── diamond/                # manual gold annotation assets
+    └── resources/                  # normalization lexicon and whitelist
 ```
 
 ## Key Methodology Notes
@@ -177,9 +203,9 @@ Run both tracks:
 
 | File | Purpose |
 | --- | --- |
-| `train_baseline.py` | baseline full fine-tuning |
-| `train_lora.py` | parameter-efficient LoRA fine-tuning |
-| `evaluate.py` | experiment comparison and evaluation summary |
+| `src/training/train_baseline.py` | baseline full fine-tuning |
+| `src/training/train_lora.py` | parameter-efficient LoRA fine-tuning |
+| `src/evaluation/evaluate.py` | experiment comparison and evaluation summary |
 | `app.py` | Streamlit interface for live review analysis |
 | `scripts/run_baseline_epochs.ps1` | baseline experiment runner |
 | `scripts/run_lora_epochs.ps1` | LoRA experiment runner |

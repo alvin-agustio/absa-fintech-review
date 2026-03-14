@@ -1,4 +1,4 @@
-"""
+﻿"""
 IndoBERT + LoRA Training (Parameter-Efficient Fine-tuning)
 ===========================================================
 Train IndoBERT with LoRA adapters for 3-class ABSA classification.
@@ -29,6 +29,8 @@ from transformers import (
     set_seed,
 )
 
+import sys
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[2]))
 from config import (
     BASE_MODEL_NAME,
     DATA_PROCESSED,

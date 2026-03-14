@@ -1,4 +1,4 @@
-"""
+﻿"""
 Inference Module
 =================
 Loads the best trained model and provides prediction functions
@@ -16,6 +16,8 @@ import numpy as np
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+import sys
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[1]))
 from config import ASPECTS, ID2LABEL, MAX_LENGTH
 
 try:

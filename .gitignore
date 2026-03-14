@@ -8,6 +8,7 @@ __pycache__/
 *.egg-info/
 .venv/
 .pytest_cache/
+src/**/__pycache__/
 
 # Training outputs and large artifacts
 models/
@@ -26,6 +27,9 @@ data/processed/*.json
 
 # Logs and local outputs
 *.log
+
+# Server result artifacts (droplet downloads) — commit selectively via results/
+droplet/
 
 # IDE
 .vscode/

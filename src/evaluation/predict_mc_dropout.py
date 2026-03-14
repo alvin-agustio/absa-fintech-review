@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import json
 from pathlib import Path
 
@@ -8,6 +8,8 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+import sys
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[2]))
 from config import ASPECTS, DATA_PROCESSED, MAX_LENGTH, MODELS_DIR
 
 LABEL2ID = {"Negative": 0, "Neutral": 1, "Positive": 2}

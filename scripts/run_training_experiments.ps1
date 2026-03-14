@@ -72,7 +72,7 @@ foreach ($epochs in $epochsList) {
         -Label "BASELINE" `
         -OutputDir $baselineOutputDir `
         -Arguments @(
-            "train_baseline.py",
+            "src/training/train_baseline.py",
             "--input_csv", $inputCsv,
             "--model_name", $modelName,
             "--output_dir", $baselineOutputDir,
@@ -91,7 +91,7 @@ foreach ($epochs in $epochsList) {
         -Label "LORA" `
         -OutputDir $loraOutputDir `
         -Arguments @(
-            "train_lora.py",
+            "src/training/train_lora.py",
             "--input_csv", $inputCsv,
             "--model_name", $modelName,
             "--output_dir", $loraOutputDir,
@@ -114,7 +114,7 @@ foreach ($epochs in $epochsList) {
             -Label "RETRAIN" `
             -OutputDir $retrainOutputDir `
             -Arguments @(
-                "retrain_filtered.py",
+                "src/training/retrain_filtered.py",
                 "--clean_csv", $retrainCleanCsv,
                 "--output_dir", $retrainOutputDir,
                 "--max_length", $maxLength,
@@ -132,7 +132,7 @@ foreach ($epochs in $epochsList) {
             -Label "RETRAIN-LORA" `
             -OutputDir $retrainLoraOutputDir `
             -Arguments @(
-                "train_lora_filtered.py",
+                "src/training/train_lora_filtered.py",
                 "--clean_csv", $retrainCleanCsv,
                 "--output_dir", $retrainLoraOutputDir,
                 "--max_length", $maxLength,

@@ -1,4 +1,4 @@
-"""
+﻿"""
 LLM-based Labeling with Gemini 2.5 Flash
 ==========================================
 Annotate reviews for ABSA: Risk, Trust, Service Quality aspects
@@ -20,6 +20,8 @@ import pandas as pd
 import re
 from dotenv import load_dotenv
 
+import sys
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[2]))
 from config import DATA_PROCESSED, GROQ_MODEL, GROQ_BATCH_SIZE, SUMOPOD_MODEL, SUMOPOD_BATCH_SIZE
 
 load_dotenv()

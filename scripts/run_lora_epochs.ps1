@@ -17,7 +17,7 @@ $epochsList = @(3, 5)
 foreach ($epochs in $epochsList) {
     $outputDir = "models/lora/epoch_$epochs"
     Write-Host "[LORA] Running epoch=$epochs -> $outputDir"
-    & $python train_lora.py `
+    & $python src/training/train_lora.py `
         --input_csv $inputCsv `
         --model_name $modelName `
         --output_dir $outputDir `

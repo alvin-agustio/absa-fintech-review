@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 import time
 import json
@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 import pandas as pd
 
+import sys
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[2]))
 from config import APPS, DATE_START, DATE_END, DATA_RAW
 
 _output_path = DATA_RAW / "reviews_raw.csv"

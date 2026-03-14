@@ -1,4 +1,4 @@
-"""
+﻿"""
 Experiment Evaluation & Comparison
 ====================================
 Compare: Baseline vs LoRA vs Retrained models.
@@ -15,6 +15,8 @@ from pathlib import Path
 import pandas as pd
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
 
+import sys
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[2]))
 from config import MODELS_DIR, DATA_PROCESSED
 
 
