@@ -250,3 +250,6 @@ This project demonstrates practical experience in:
 - complete fresh v2 training comparison
 - validate the best model against the manual gold subset
 - add a license and lightweight CI checks
+
+Characteristic:
+- Gunakan dengan bahasa yang mudah dimengerti, jangan terbelit-belit. Dan straight to the point.

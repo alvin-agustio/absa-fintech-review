@@ -17,6 +17,7 @@ data/processed/archive/
 data/processed/*.csv
 data/processed/*.jsonl
 data/processed/*.json
+data/processed/dashboard/
 
 # Keep documentation folders under processed data if needed
 !data/processed/diamond/

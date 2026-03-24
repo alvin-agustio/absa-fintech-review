@@ -1,0 +1,291 @@
+{
+  "model_name": "baseline_epoch8",
+  "model_dir": "C:\\Users\\alvin\\Downloads\\skripsi\\droplet\\skripsi_post_training_all_no_checkpoints_2026-03-13_165411\\models\\baseline\\epoch_8\\model",
+  "model_type": "full_finetune",
+  "n_rows": 300,
+  "n_present": 251,
+  "n_absent": 49,
+  "sentiment_present_only": {
+    "n_rows": 251,
+    "accuracy": 0.9323,
+    "f1_macro": 0.7946,
+    "f1_weighted": 0.933,
+    "classification_report": {
+      "Negative": {
+        "precision": 0.9608,
+        "recall": 0.9608,
+        "f1-score": 0.9608,
+        "support": 204.0
+      },
+      "Neutral": {
+        "precision": 0.5,
+        "recall": 0.5455,
+        "f1-score": 0.5217,
+        "support": 11.0
+      },
+      "Positive": {
+        "precision": 0.9143,
+        "recall": 0.8889,
+        "f1-score": 0.9014,
+        "support": 36.0
+      },
+      "accuracy": 0.9323,
+      "macro avg": {
+        "precision": 0.7917,
+        "recall": 0.7984,
+        "f1-score": 0.7946,
+        "support": 251.0
+      },
+      "weighted avg": {
+        "precision": 0.9339,
+        "recall": 0.9323,
+        "f1-score": 0.933,
+        "support": 251.0
+      }
+    },
+    "confusion_matrix": {
+      "Negative": {
+        "Negative": 196,
+        "Neutral": 6,
+        "Positive": 2
+      },
+      "Neutral": {
+        "Negative": 4,
+        "Neutral": 6,
+        "Positive": 1
+      },
+      "Positive": {
+        "Negative": 4,
+        "Neutral": 0,
+        "Positive": 32
+      }
+    },
+    "per_aspect": {
+      "risk": {
+        "n_rows": 64,
+        "accuracy": 0.9062,
+        "f1_macro": 0.8129,
+        "f1_weighted": 0.9056
+      },
+      "service": {
+        "n_rows": 100,
+        "accuracy": 0.93,
+        "f1_macro": 0.7701,
+        "f1_weighted": 0.9277
+      },
+      "trust": {
+        "n_rows": 87,
+        "accuracy": 0.954,
+        "f1_macro": 0.7911,
+        "f1_weighted": 0.9595
+      }
+    }
+  },
+  "aspect_absent_diagnostics": {
+    "n_rows": 49,
+    "predicted_label_distribution": {
+      "Negative": 37,
+      "Positive": 8,
+      "Neutral": 4
+    },
+    "mean_confidence": 0.997,
+    "median_confidence": 0.9996,
+    "max_confidence": 0.9999,
+    "top_confident_absent_cases": [
+      {
+        "item_id": 288,
+        "review_id": 167239,
+        "aspect": "trust",
+        "review_text": "peminjaman cepat dan mudah, bunga juga kecil",
+        "pred_label": "Positive",
+        "pred_confidence": 0.9999125003814697,
+        "notes": "sentimen jelas positif, tetapi aspek trust tidak disebut langsung; lebih natural ke service/risk"
+      },
+      {
+        "item_id": 238,
+        "review_id": 169751,
+        "aspect": "trust",
+        "review_text": "bagus proses mudah dan bisa membantu keuangan darurat, tenor nya panjang bunga sangat rendah dibanding apl lainya.. sangat recommended aplikasi akulaku ini",
+        "pred_label": "Positive",
+        "pred_confidence": 0.9999099969863892,
+        "notes": "pemblokiran setelah bayar cepat adalah masalah layanan yang jelas"
+      },
+      {
+        "item_id": 14,
+        "review_id": 80160,
+        "aspect": "risk",
+        "review_text": "kerenn,mudah dan cepat",
+        "pred_label": "Positive",
+        "pred_confidence": 0.9998860359191895,
+        "notes": "aspek risk tidak dibahas; ini hanya sentimen umum terhadap aplikasi"
+      },
+      {
+        "item_id": 39,
+        "review_id": 80160,
+        "aspect": "trust",
+        "review_text": "kerenn,mudah dan cepat",
+        "pred_label": "Positive",
+        "pred_confidence": 0.9998856782913208,
+        "notes": "aspek trust tidak dibahas; ini hanya sentimen umum terhadap aplikasi"
+      },
+      {
+        "item_id": 283,
+        "review_id": 117654,
+        "aspect": "trust",
+        "review_text": "sejauh ini masih aman aman saja ..pelayanan baik proses mudah cuma kok paylater nya tidak bisa di gunakan",
+        "pred_label": "Positive",
+        "pred_confidence": 0.999716579914093,
+        "notes": "trust tidak muncul eksplisit dan sentimennya campuran karena ada pujian plus keluhan paylater tidak bisa dipakai"
+      },
+      {
+        "item_id": 54,
+        "review_id": 115305,
+        "aspect": "risk",
+        "review_text": "saya sangat kecewa atas akulaku, saya sudah berlangganan dengan akulaku 8 tahun, baru sekarang saya komplen karena saya membeli barang dan dikasih barang palsu oleh penjual, tapi 2 x admin akulaku menolak nya, tidak seperti lazada, hayoo semuanya pindah saja ke lazada, akulaku sudah mengecewakan.. langsung saya unnistal apk nya",
+        "pred_label": "Negative",
+        "pred_confidence": 0.9996644258499146,
+        "notes": "aspek risk tidak dibahas jelas; isi lebih kuat ke service/trust terkait komplain dan penanganan admin"
+      },
+      {
+        "item_id": 208,
+        "review_id": 102282,
+        "aspect": "risk",
+        "review_text": "ngasih hadiah lewat luckydraw tapi kaya gtu, sudah ngundang tmn banyak, sisa 1 rupiah saja kaya nya dipersulit pengajuan selalu ditolak, langsung uninstal, yang gua undangin gua suruh uninstal juga",
+        "pred_label": "Negative",
+        "pred_confidence": 0.9996631145477295,
+        "notes": "aspek risk tidak dibahas jelas; isi lebih kuat ke service/promosi dan pengajuan"
+      },
+      {
+        "item_id": 231,
+        "review_id": 121038,
+        "aspect": "risk",
+        "review_text": "d coba dulu klu berhasil pinjamnnya saya kaaih bintang 5..karena beberapa bulan lalu mengadakn pengajuan tidak lagi cair2 padahal tidak pernah telat bayrx",
+        "pred_label": "Negative",
+        "pred_confidence": 0.9996631145477295,
+        "notes": "aspek risk tidak dibahas jelas; isi lebih ke keluhan pengajuan/pencairan sehingga lebih cocok ke service"
+      },
+      {
+        "item_id": 188,
+        "review_id": 253555,
+        "aspect": "risk",
+        "review_text": "aplikasi taiii...sudah isi semua data tunggu pengajuan.malah d tolak..padahal tidak pernah punya urusan sama apk mana pun...gua sumpahin supaya d blok ini apk..",
+        "pred_label": "Negative",
+        "pred_confidence": 0.9996614456176758,
+        "notes": "aspek risk tidak dibahas jelas; inti review lebih ke penolakan pengajuan, jadi lebih cocok ke service/trust"
+      },
+      {
+        "item_id": 242,
+        "review_id": 231599,
+        "aspect": "risk",
+        "review_text": "awalnya saya suka dng aplikasi ini sangat membantu tapi anehnya tagihan saya lunasi sblm tgl dan bulannya tapi malah di bekukan permanen...letak kesalahan saya di mana ya..? hrs bagus dong nasabah melunasi sblm tgl dan blnnya",
+        "pred_label": "Negative",
+        "pred_confidence": 0.9996607303619385,
+        "notes": "aspek risk tidak terlalu langsung; inti keluhan adalah akun dibekukan setelah pelunasan cepat, lebih cocok ke service/trust"
+      }
+    ]
+  },
+  "aspect_presence_threshold_sweep": [
+    {
+      "threshold": 0.4,
+      "accuracy": 0.8367,
+      "precision": 0.8367,
+      "recall": 1.0,
+      "f1": 0.9111,
+      "confusion_matrix": {
+        "gold_absent": {
+          "pred_absent": 0,
+          "pred_present": 49
+        },
+        "gold_present": {
+          "pred_absent": 0,
+          "pred_present": 251
+        }
+      }
+    },
+    {
+      "threshold": 0.5,
+      "accuracy": 0.8367,
+      "precision": 0.8367,
+      "recall": 1.0,
+      "f1": 0.9111,
+      "confusion_matrix": {
+        "gold_absent": {
+          "pred_absent": 0,
+          "pred_present": 49
+        },
+        "gold_present": {
+          "pred_absent": 0,
+          "pred_present": 251
+        }
+      }
+    },
+    {
+      "threshold": 0.6,
+      "accuracy": 0.8333,
+      "precision": 0.8361,
+      "recall": 0.996,
+      "f1": 0.9091,
+      "confusion_matrix": {
+        "gold_absent": {
+          "pred_absent": 0,
+          "pred_present": 49
+        },
+        "gold_present": {
+          "pred_absent": 1,
+          "pred_present": 250
+        }
+      }
+    },
+    {
+      "threshold": 0.7,
+      "accuracy": 0.8333,
+      "precision": 0.8361,
+      "recall": 0.996,
+      "f1": 0.9091,
+      "confusion_matrix": {
+        "gold_absent": {
+          "pred_absent": 0,
+          "pred_present": 49
+        },
+        "gold_present": {
+          "pred_absent": 1,
+          "pred_present": 250
+        }
+      }
+    },
+    {
+      "threshold": 0.8,
+      "accuracy": 0.8267,
+      "precision": 0.835,
+      "recall": 0.988,
+      "f1": 0.9051,
+      "confusion_matrix": {
+        "gold_absent": {
+          "pred_absent": 0,
+          "pred_present": 49
+        },
+        "gold_present": {
+          "pred_absent": 3,
+          "pred_present": 248
+        }
+      }
+    },
+    {
+      "threshold": 0.9,
+      "accuracy": 0.8267,
+      "precision": 0.835,
+      "recall": 0.988,
+      "f1": 0.9051,
+      "confusion_matrix": {
+        "gold_absent": {
+          "pred_absent": 0,
+          "pred_present": 49
+        },
+        "gold_present": {
+          "pred_absent": 3,
+          "pred_present": 248
+        }
+      }
+    }
+  ]
+}

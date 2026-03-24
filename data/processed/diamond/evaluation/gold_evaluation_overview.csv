@@ -1,0 +1,4 @@
+model_name,model_type,n_present,n_absent,sentiment_accuracy_present,sentiment_f1_macro_present,sentiment_f1_weighted_present,best_presence_threshold,best_presence_f1,best_presence_precision,best_presence_recall,absent_mean_confidence
+retrained_epoch8,full_finetune,251,49,0.9442,0.8097,0.9398,0.4,0.9111,0.8367,1.0,0.9999
+baseline_epoch5,full_finetune,251,49,0.9402,0.7901,0.9374,0.4,0.9111,0.8367,1.0,0.9954
+retrained_lora_epoch8,peft,251,49,0.9402,0.7076,0.9292,0.4,0.9111,0.8367,1.0,0.9955

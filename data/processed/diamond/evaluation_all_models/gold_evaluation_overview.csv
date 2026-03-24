@@ -1,0 +1,13 @@
+model_name,model_type,n_present,n_absent,sentiment_accuracy_present,sentiment_f1_macro_present,sentiment_f1_weighted_present,best_presence_threshold,best_presence_f1,best_presence_precision,best_presence_recall,absent_mean_confidence
+lora_epoch8,peft,251,49,0.9522,0.8174,0.9479,0.4,0.9111,0.8367,1.0,0.9804
+retrained_epoch8,full_finetune,251,49,0.9442,0.8097,0.9398,0.4,0.9111,0.8367,1.0,0.9999
+baseline_epoch8,full_finetune,251,49,0.9323,0.7946,0.933,0.4,0.9111,0.8367,1.0,0.997
+baseline_epoch5,full_finetune,251,49,0.9402,0.7901,0.9374,0.4,0.9111,0.8367,1.0,0.9954
+lora_epoch5,peft,251,49,0.9442,0.7477,0.9366,0.4,0.9111,0.8367,1.0,0.9658
+retrained_epoch3,full_finetune,251,49,0.9402,0.7436,0.9318,0.4,0.9111,0.8367,1.0,0.999
+retrained_epoch5,full_finetune,251,49,0.9323,0.731,0.9246,0.4,0.9111,0.8367,1.0,0.9992
+retrained_lora_epoch8,peft,251,49,0.9402,0.7076,0.9292,0.4,0.9111,0.8367,1.0,0.9955
+baseline_epoch3,full_finetune,251,49,0.9363,0.706,0.9253,0.4,0.9111,0.8367,1.0,0.9902
+retrained_lora_epoch5,peft,251,49,0.9402,0.6657,0.9259,0.4,0.9111,0.8367,1.0,0.993
+lora_epoch3,peft,251,49,0.9402,0.6144,0.9193,0.4,0.9111,0.8367,1.0,0.9469
+retrained_lora_epoch3,peft,251,49,0.9363,0.6098,0.9156,0.7,0.9127,0.8395,1.0,0.9735
