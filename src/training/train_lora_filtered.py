@@ -1,4 +1,4 @@
-﻿import argparse
+import argparse
 import json
 import pathlib
 import time
@@ -7,8 +7,7 @@ import numpy as np
 import pandas as pd
 import torch
 from peft import LoraConfig, TaskType, get_peft_model
-from sklearn.metrics import accuracy_score, classification_report, f1_score
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
 from torch.utils.data import Dataset
 from transformers import (
     AutoModelForSequenceClassification,
@@ -19,7 +18,7 @@ from transformers import (
 )
 
 import sys
-sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2]))
 from config import (
     BASE_MODEL_NAME,
     DATA_PROCESSED,
@@ -31,7 +30,19 @@ from config import (
     LORA_TARGET_MODULES,
     MAX_LENGTH,
     MODELS_DIR,
+    PEFT_DEFAULT_LR,
     SEED,
+    TRAIN_BATCH_SIZE,
+    TRAIN_MAX_EPOCHS,
+)
+from src.training.run_utils import (
+    EpochTimingCallback,
+    build_epoch_log_df,
+    compute_macro_metrics,
+    infer_uncertainty_source,
+    review_level_split,
+    select_best_validation_epoch,
+    write_split_manifest,
 )
 
 
@@ -69,11 +80,7 @@ def load_clean_data(path: str) -> pd.DataFrame:
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
-    return {
-        "accuracy": accuracy_score(labels, predictions),
-        "f1_macro": f1_score(labels, predictions, average="macro", zero_division=0),
-        "f1_weighted": f1_score(labels, predictions, average="weighted", zero_division=0),
-    }
+    return compute_macro_metrics(labels, predictions)
 
 
 def main():
@@ -84,13 +91,17 @@ def main():
     parser.add_argument("--max_length", type=int, default=MAX_LENGTH)
     parser.add_argument("--test_size", type=float, default=0.2)
     parser.add_argument("--val_size", type=float, default=0.1)
-    parser.add_argument("--epochs", type=int, default=5)
-    parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--lr", type=float, default=2e-4)
+    parser.add_argument("--epochs", type=int, default=TRAIN_MAX_EPOCHS)
+    parser.add_argument("--batch_size", type=int, default=TRAIN_BATCH_SIZE)
+    parser.add_argument("--lr", type=float, default=PEFT_DEFAULT_LR)
     parser.add_argument("--seed", type=int, default=SEED)
     parser.add_argument("--lora_r", type=int, default=LORA_R)
     parser.add_argument("--lora_alpha", type=int, default=LORA_ALPHA)
     parser.add_argument("--lora_dropout", type=float, default=LORA_DROPOUT)
+    parser.add_argument("--experiment_family", default="retrained_lora")
+    parser.add_argument("--uncertainty_source_model_id", default=None)
+    parser.add_argument("--noise_summary_json", default=None)
+    parser.add_argument("--mc_summary_json", default=None)
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -98,20 +109,21 @@ def main():
     output_path.mkdir(parents=True, exist_ok=True)
 
     data = load_clean_data(args.clean_csv)
-
     if len(data) < 30:
         raise ValueError(f"Not enough clean labeled data: {len(data)} (need >= 30)")
+    uncertainty_meta = infer_uncertainty_source(args.clean_csv)
 
     print(f"[RETRAIN-LORA] Total training samples: {len(data)}")
     print(f"  Label distribution:\n{data['label'].value_counts().to_string()}")
     print(f"  Aspect distribution:\n{data['aspect'].value_counts().to_string()}")
 
-    train_df, test_df = train_test_split(
-        data, test_size=args.test_size, random_state=args.seed, stratify=data["label_id"],
+    train_df, val_df, test_df = review_level_split(
+        data,
+        seed=args.seed,
+        test_size=args.test_size,
+        val_size=args.val_size,
     )
-    train_df, val_df = train_test_split(
-        train_df, test_size=args.val_size, random_state=args.seed, stratify=train_df["label_id"],
-    )
+    split_manifest = write_split_manifest(output_path, train_df, val_df, test_df)
 
     print(f"  Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")
 
@@ -125,7 +137,7 @@ def main():
     test_dataset = ABSADataset(test_enc, test_df["label_id"].tolist())
 
     base_model = AutoModelForSequenceClassification.from_pretrained(
-        args.model_name, num_labels=3, id2label=ID2LABEL, label2id=LABEL2ID,
+        args.model_name, num_labels=3, id2label=ID2LABEL, label2id=LABEL2ID
     )
 
     lora_config = LoraConfig(
@@ -163,29 +175,58 @@ def main():
         save_total_limit=2,
     )
 
+    timing_callback = EpochTimingCallback()
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
         compute_metrics=compute_metrics,
+        callbacks=[timing_callback],
     )
 
     start_time = time.time()
     trainer.train()
     train_time = time.time() - start_time
 
+    epoch_log_df = build_epoch_log_df(trainer.state.log_history, timing_callback)
+    if not epoch_log_df.empty:
+        epoch_log_df.to_csv(output_path / "epoch_log.csv", index=False)
+    best_validation = select_best_validation_epoch(epoch_log_df) or {}
+
     test_output = trainer.predict(test_dataset)
     y_true = np.array(test_df["label_id"].tolist())
     y_pred = np.argmax(test_output.predictions, axis=1)
+    test_metrics = compute_macro_metrics(y_true, y_pred)
 
     metrics = {
-        "test_accuracy": float(accuracy_score(y_true, y_pred)),
-        "test_f1_macro": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
-        "test_f1_weighted": float(f1_score(y_true, y_pred, average="weighted", zero_division=0)),
+        "experiment_family": args.experiment_family,
+        "training_regime": "peft",
+        "uncertainty_enabled": True,
+        "uncertainty_source_model_family": uncertainty_meta["uncertainty_source_model_family"],
+        "uncertainty_source_run_name": uncertainty_meta["uncertainty_source_run_name"],
+        "uncertainty_source_model_id": args.uncertainty_source_model_id or uncertainty_meta["uncertainty_source_model_id"],
+        "noise_summary_json": args.noise_summary_json,
+        "mc_summary_json": args.mc_summary_json,
+        "test_accuracy": test_metrics["accuracy"],
+        "test_precision_macro": test_metrics["precision_macro"],
+        "test_recall_macro": test_metrics["recall_macro"],
+        "test_f1_macro": test_metrics["f1_macro"],
+        "test_f1_weighted": test_metrics["f1_weighted"],
+        "best_epoch": int(best_validation["epoch"]) if best_validation.get("epoch") is not None else None,
+        "best_checkpoint": str(trainer.state.best_model_checkpoint) if trainer.state.best_model_checkpoint else None,
+        "best_validation_accuracy": best_validation.get("eval_accuracy"),
+        "best_validation_precision_macro": best_validation.get("eval_precision_macro"),
+        "best_validation_recall_macro": best_validation.get("eval_recall_macro"),
+        "best_validation_f1_macro": best_validation.get("eval_f1_macro"),
+        "best_validation_f1_weighted": best_validation.get("eval_f1_weighted"),
+        "best_validation_loss": best_validation.get("eval_loss"),
         "n_train": len(train_df),
         "n_val": len(val_df),
         "n_test": len(test_df),
+        "n_train_reviews": int(train_df["review_id"].nunique()),
+        "n_val_reviews": int(val_df["review_id"].nunique()),
+        "n_test_reviews": int(test_df["review_id"].nunique()),
         "n_total_clean": len(data),
         "total_params": total_params,
         "trainable_params": trainable_params,
@@ -193,16 +234,21 @@ def main():
         "lora_r": args.lora_r,
         "lora_alpha": args.lora_alpha,
         "lora_dropout": args.lora_dropout,
+        "train_start_timestamp": timing_callback.train_start_timestamp,
+        "train_end_timestamp": timing_callback.train_end_timestamp,
         "training_time_seconds": round(train_time, 2),
         "label_distribution": data["label"].value_counts().to_dict(),
         "aspect_distribution": data["aspect"].value_counts().to_dict(),
+        "split_manifest": split_manifest,
     }
 
     report_text = classification_report(
-        y_true, y_pred,
+        y_true,
+        y_pred,
         labels=[0, 1, 2],
         target_names=[ID2LABEL[i] for i in range(3)],
-        digits=4, zero_division=0,
+        digits=4,
+        zero_division=0,
     )
 
     model.save_pretrained(str(output_path / "model"))

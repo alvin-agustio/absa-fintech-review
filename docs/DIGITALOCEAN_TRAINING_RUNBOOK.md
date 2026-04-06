@@ -53,6 +53,14 @@ source .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 ```
 
+Atau langsung pakai setup ROCm native untuk MI300X:
+
+```bash
+chmod +x scripts/setup_digitalocean_rocm.sh
+./scripts/setup_digitalocean_rocm.sh
+source .venv/bin/activate
+```
+
 ## 4. Install PyTorch Sesuai GPU
 
 ### AMD ROCm
@@ -90,16 +98,37 @@ python -c "import torch; print(torch.__version__); print(torch.version.cuda); pr
 
 ## 7. Jalankan Eksperimen Utama
 
-### Training baseline dan LoRA
+### Training baseline dan keluarga PEFT utama
 
 ```bash
-python train_baseline.py
-python train_lora.py
+python src/training/train_baseline.py
+python src/training/train_lora.py
+python src/training/train_dora.py
+python src/training/train_adalora.py
 ```
 
-### Sweep epoch 3, 5, 8
+Untuk `QLoRA`, jalankan hanya setelah smoke test backend 4-bit lolos:
 
-Jika memakai PowerShell di Linux:
+```bash
+python scripts/check_qlora_rocm_smoke.py
+python src/training/train_qlora.py
+```
+
+### Run penuh sampai 15 epoch
+
+Gunakan runner shell-native:
+
+```bash
+bash scripts/run_training_experiments.sh
+```
+
+Jika ingin ikut menjalankan `QLoRA`:
+
+```bash
+INCLUDE_QLORA=1 bash scripts/run_training_experiments.sh
+```
+
+PowerShell Linux tetap bisa dipakai jika memang diperlukan:
 
 ```bash
 sed -i 's#\.\\.venv\\Scripts\\python\.exe#./.venv/bin/python#' scripts/run_training_experiments.ps1
@@ -108,13 +137,27 @@ pwsh ./scripts/run_training_experiments.ps1
 
 ## 8. Uncertainty dan Noise Filtering
 
-Gunakan model weak-label terbaik sebagai dasar.
-
-Contoh:
+Gunakan jalur family-aware, bukan satu `clean_data.csv` global.
 
 ```bash
-python predict_mc_dropout.py --input_csv data/processed/dataset_absa_50k_v2_intersection.csv --model_dir models/baseline/epoch_5/model --num_mc 30 --batch_size 64
-python detect_label_noise.py
+bash scripts/run_uncertainty_experiments.sh
+```
+
+Script ini menulis artefak seperti:
+
+- `data/processed/uncertainty/baseline/epoch_15/mc_predictions.csv`
+- `data/processed/uncertainty/lora/epoch_15/mc_predictions.csv`
+- `data/processed/uncertainty/dora/epoch_15/mc_predictions.csv`
+- `data/processed/uncertainty/adalora/epoch_15/mc_predictions.csv`
+- `data/processed/noise/baseline/epoch_15/clean_data.csv`
+- `data/processed/noise/lora/epoch_15/clean_data.csv`
+- `data/processed/noise/dora/epoch_15/clean_data.csv`
+- `data/processed/noise/adalora/epoch_15/clean_data.csv`
+
+Jika ingin ikut menjalankan `QLoRA`:
+
+```bash
+INCLUDE_QLORA=1 bash scripts/run_uncertainty_experiments.sh
 ```
 
 ## 9. Retrain pada Clean Subset
@@ -122,23 +165,24 @@ python detect_label_noise.py
 ### Full fine-tuning
 
 ```bash
-python retrain_filtered.py --epochs 3 --output_dir models/retrained/epoch_3
-python retrain_filtered.py --epochs 5 --output_dir models/retrained/epoch_5
-python retrain_filtered.py --epochs 8 --output_dir models/retrained/epoch_8
+bash scripts/run_uncertainty_retraining.sh
 ```
 
-### LoRA pada clean subset
+### Keluarga PEFT pada clean subset
+
+Script di atas akan menjalankan retraining full fine-tuning dan keluarga PEFT pada clean subset family masing-masing.
+
+Untuk ikut menjalankan `retrained_qlora`:
 
 ```bash
-python train_lora_filtered.py --epochs 3 --output_dir models/retrained_lora/epoch_3
-python train_lora_filtered.py --epochs 5 --output_dir models/retrained_lora/epoch_5
-python train_lora_filtered.py --epochs 8 --output_dir models/retrained_lora/epoch_8
+INCLUDE_QLORA=1 bash scripts/run_uncertainty_retraining.sh
 ```
 
 ## 10. Evaluasi Final
 
 ```bash
-python evaluate.py
+python src/evaluation/evaluate.py
+python src/evaluation/evaluate_gold_subset.py
 ```
 
 File penting hasil evaluasi:
@@ -147,6 +191,10 @@ File penting hasil evaluasi:
 - `data/processed/evaluation/evaluation_detailed.json`
 - `data/processed/evaluation/epoch_comparison_summary.csv`
 - `data/processed/evaluation/epoch_comparison_wide.csv`
+- `data/processed/evaluation/model_comparison_table.csv`
+- `data/processed/evaluation/comparison_group_best.csv`
+- `data/processed/diamond/evaluation/gold_evaluation_overview.csv`
+- `data/processed/diamond/evaluation/gold_evaluation_group_best.csv`
 
 ## 11. Arsipkan Hasil Penting
 
@@ -163,49 +211,37 @@ tar -czf exports/skripsi_eval_core.tar.gz \
 
 ```bash
 tar -czf exports/skripsi_experiment_reports.tar.gz \
-  models/baseline/epoch_3/metrics.json \
-  models/baseline/epoch_3/classification_report.txt \
-  models/baseline/epoch_3/test_predictions.csv \
-  models/baseline/epoch_5/metrics.json \
-  models/baseline/epoch_5/classification_report.txt \
-  models/baseline/epoch_5/test_predictions.csv \
-  models/baseline/epoch_8/metrics.json \
-  models/baseline/epoch_8/classification_report.txt \
-  models/baseline/epoch_8/test_predictions.csv \
-  models/lora/epoch_3/metrics.json \
-  models/lora/epoch_3/classification_report.txt \
-  models/lora/epoch_3/test_predictions.csv \
-  models/lora/epoch_5/metrics.json \
-  models/lora/epoch_5/classification_report.txt \
-  models/lora/epoch_5/test_predictions.csv \
-  models/lora/epoch_8/metrics.json \
-  models/lora/epoch_8/classification_report.txt \
-  models/lora/epoch_8/test_predictions.csv \
-  models/retrained/epoch_3/metrics.json \
-  models/retrained/epoch_3/classification_report.txt \
-  models/retrained/epoch_3/test_predictions.csv \
-  models/retrained/epoch_5/metrics.json \
-  models/retrained/epoch_5/classification_report.txt \
-  models/retrained/epoch_5/test_predictions.csv \
-  models/retrained/epoch_8/metrics.json \
-  models/retrained/epoch_8/classification_report.txt \
-  models/retrained/epoch_8/test_predictions.csv \
-  models/retrained_lora/epoch_3/metrics.json \
-  models/retrained_lora/epoch_3/classification_report.txt \
-  models/retrained_lora/epoch_3/test_predictions.csv \
-  models/retrained_lora/epoch_5/metrics.json \
-  models/retrained_lora/epoch_5/classification_report.txt \
-  models/retrained_lora/epoch_5/test_predictions.csv \
-  models/retrained_lora/epoch_8/metrics.json \
-  models/retrained_lora/epoch_8/classification_report.txt \
-  models/retrained_lora/epoch_8/test_predictions.csv
+  models/baseline/epoch_15/metrics.json \
+  models/baseline/epoch_15/classification_report.txt \
+  models/baseline/epoch_15/test_predictions.csv \
+  models/lora/epoch_15/metrics.json \
+  models/lora/epoch_15/classification_report.txt \
+  models/lora/epoch_15/test_predictions.csv \
+  models/dora/epoch_15/metrics.json \
+  models/dora/epoch_15/classification_report.txt \
+  models/dora/epoch_15/test_predictions.csv \
+  models/adalora/epoch_15/metrics.json \
+  models/adalora/epoch_15/classification_report.txt \
+  models/adalora/epoch_15/test_predictions.csv \
+  models/retrained/epoch_15/metrics.json \
+  models/retrained/epoch_15/classification_report.txt \
+  models/retrained/epoch_15/test_predictions.csv \
+  models/retrained_lora/epoch_15/metrics.json \
+  models/retrained_lora/epoch_15/classification_report.txt \
+  models/retrained_lora/epoch_15/test_predictions.csv \
+  models/retrained_dora/epoch_15/metrics.json \
+  models/retrained_dora/epoch_15/classification_report.txt \
+  models/retrained_dora/epoch_15/test_predictions.csv \
+  models/retrained_adalora/epoch_15/metrics.json \
+  models/retrained_adalora/epoch_15/classification_report.txt \
+  models/retrained_adalora/epoch_15/test_predictions.csv
 ```
 
 ### Model final terbaik
 
 ```bash
-tar -czf exports/skripsi_best_model_retrained_lora_epoch8.tar.gz \
-  models/retrained_lora/epoch_8/model
+tar -czf exports/skripsi_best_model.tar.gz \
+  models/retrained_lora/epoch_15/model
 ```
 
 ### Paket lengkap pasca-training tanpa checkpoint
@@ -217,18 +253,14 @@ tar -czf exports/skripsi_post_training_all_no_checkpoints_${STAMP}.tar.gz \
   data/processed/uncertainty \
   data/processed/noise \
   data/processed/evaluation \
-  models/baseline/epoch_3 \
-  models/baseline/epoch_5 \
-  models/baseline/epoch_8 \
-  models/lora/epoch_3 \
-  models/lora/epoch_5 \
-  models/lora/epoch_8 \
-  models/retrained/epoch_3 \
-  models/retrained/epoch_5 \
-  models/retrained/epoch_8 \
-  models/retrained_lora/epoch_3 \
-  models/retrained_lora/epoch_5 \
-  models/retrained_lora/epoch_8
+  models/baseline/epoch_15 \
+  models/lora/epoch_15 \
+  models/dora/epoch_15 \
+  models/adalora/epoch_15 \
+  models/retrained/epoch_15 \
+  models/retrained_lora/epoch_15 \
+  models/retrained_dora/epoch_15 \
+  models/retrained_adalora/epoch_15
 ```
 
 ## 12. Simpan Metadata Reproducibility

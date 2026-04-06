@@ -1,0 +1,68 @@
+{
+  "generated_at_utc": "2026-04-01T14:17:02.471343+00:00",
+  "model_name": "indobenchmark/indobert-base-p1",
+  "batch_size": 2,
+  "max_length": 64,
+  "backend": {
+    "cuda_available": true,
+    "backend": "cuda",
+    "hip_version": null,
+    "cuda_version": "12.1",
+    "device_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "device_memory_gb": 4.0
+  },
+  "checks": [
+    {
+      "name": "python",
+      "status": "PASS",
+      "detail": "3.12.9"
+    },
+    {
+      "name": "torch_import",
+      "status": "PASS",
+      "detail": "2.5.1+cu121"
+    },
+    {
+      "name": "gpu_runtime",
+      "status": "PASS",
+      "detail": "backend=cuda device=NVIDIA GeForce RTX 3050 Laptop GPU memory_gb=4.0"
+    },
+    {
+      "name": "peft_import",
+      "status": "PASS",
+      "detail": "0.14.0"
+    },
+    {
+      "name": "transformers_import",
+      "status": "PASS",
+      "detail": "4.46.2"
+    },
+    {
+      "name": "bitsandbytes_import",
+      "status": "FAIL",
+      "detail": "No module named 'bitsandbytes'. QLoRA 4-bit path usually depends on bitsandbytes."
+    },
+    {
+      "name": "rocminfo",
+      "status": "WARN",
+      "detail": "[WinError 2] The system cannot find the file specified"
+    },
+    {
+      "name": "amd_smi",
+      "status": "WARN",
+      "detail": "[WinError 2] The system cannot find the file specified"
+    },
+    {
+      "name": "qlora_4bit_load",
+      "status": "FAIL",
+      "detail": "Preconditions not met."
+    },
+    {
+      "name": "qlora_forward_pass",
+      "status": "FAIL",
+      "detail": "Model load did not complete."
+    }
+  ],
+  "overall_status": "FAIL",
+  "recommendation": "Do not start the full QLoRA run yet. Fix the failed checks first."
+}

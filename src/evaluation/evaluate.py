@@ -22,6 +22,7 @@ from config import MODELS_DIR, DATA_PROCESSED
 
 LABEL_ORDER = ["Negative", "Neutral", "Positive"]
 EPOCH_DIR_PATTERN = re.compile(r"^epoch_(\d+)$")
+PEFT_HINTS = ("lora", "dora", "qlora", "adalora")
 
 
 def has_eval_artifacts(exp_dir: Path) -> bool:
@@ -62,6 +63,15 @@ def find_candidate_roots(model_name: str) -> list[Path]:
     return roots
 
 
+def discover_model_families() -> list[str]:
+    families: list[str] = []
+    if MODELS_DIR.exists():
+        for child in MODELS_DIR.iterdir():
+            if child.is_dir() and child.name != "archive":
+                families.append(child.name)
+    return sorted(families)
+
+
 def resolve_experiment_dir(name: str) -> Path:
     active = MODELS_DIR / name
     if has_eval_artifacts(active):
@@ -86,12 +96,108 @@ def load_json_from_candidates(paths: list[Path]) -> dict | None:
     return None
 
 
+def collect_family_summaries(base_dir: Path, summary_name: str) -> list[dict]:
+    rows: list[dict] = []
+    if not base_dir.exists():
+        return rows
+    candidates = list(base_dir.glob(f"*/{summary_name}")) + list(base_dir.glob(f"*/*/{summary_name}"))
+    for summary_path in sorted(candidates):
+        try:
+            payload = json.loads(summary_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        payload["summary_path"] = str(summary_path)
+        rows.append(payload)
+    return rows
+
+
+def infer_comparison_metadata(model_name: str, metrics: dict | None = None) -> dict:
+    metrics = metrics or {}
+    experiment_family = str(metrics.get("experiment_family") or model_name)
+    training_regime = str(
+        metrics.get("training_regime")
+        or ("peft" if any(token in model_name.lower() for token in PEFT_HINTS) else "full_finetune")
+    )
+    uncertainty_enabled = bool(metrics.get("uncertainty_enabled", False))
+    if not metrics and (model_name == "retrained" or model_name.startswith("retrained_")):
+        uncertainty_enabled = True
+
+    comparison_group = "baseline"
+    if training_regime == "peft":
+        comparison_group = "peft"
+    if uncertainty_enabled and training_regime == "full_finetune":
+        comparison_group = "baseline_uncertainty"
+    elif uncertainty_enabled and training_regime == "peft":
+        comparison_group = "peft_uncertainty"
+
+    return {
+        "experiment_family": experiment_family,
+        "training_regime": training_regime,
+        "uncertainty_enabled": uncertainty_enabled,
+        "comparison_group": comparison_group,
+    }
+
+
+def build_model_comparison_table(results: dict) -> pd.DataFrame:
+    rows = []
+    for model_name, payload in results.items():
+        if not isinstance(payload, dict):
+            continue
+        if "accuracy" not in payload or "f1_macro" not in payload:
+            continue
+        if "comparison_group" not in payload:
+            continue
+        rows.append(
+            {
+                "model_name": model_name,
+                "experiment_family": payload.get("experiment_family"),
+                "training_regime": payload.get("training_regime"),
+                "uncertainty_enabled": payload.get("uncertainty_enabled"),
+                "uncertainty_variant": "with_uncertainty" if payload.get("uncertainty_enabled") else "without_uncertainty",
+                "comparison_group": payload.get("comparison_group"),
+                "accuracy": payload.get("accuracy"),
+                "f1_macro": payload.get("f1_macro"),
+                "f1_weighted": payload.get("f1_weighted"),
+                "training_time_seconds": payload.get("training_time_seconds"),
+                "trainable_params": payload.get("trainable_params"),
+                "trainable_pct": payload.get("trainable_pct"),
+                "uncertainty_source_model_id": payload.get("uncertainty_source_model_id"),
+            }
+        )
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).sort_values(
+        by=["uncertainty_variant", "comparison_group", "f1_macro", "accuracy"],
+        ascending=[True, True, False, False],
+    ).reset_index(drop=True)
+
+
+def build_comparison_group_best_table(comparison_df: pd.DataFrame) -> pd.DataFrame:
+    if comparison_df.empty:
+        return comparison_df
+
+    ranked = comparison_df.sort_values(
+        by=["comparison_group", "f1_macro", "accuracy", "training_time_seconds"],
+        ascending=[True, False, False, True],
+        na_position="last",
+    )
+    best_rows = ranked.groupby("comparison_group", as_index=False).head(1).reset_index(drop=True)
+    return best_rows
+
+
 def resolve_metrics(exp_dir: Path) -> dict | None:
     return load_json_from_candidates([
         exp_dir / "metrics.json",
         exp_dir / "baseline_metrics.json",
         exp_dir / "filtered_metrics.json",
     ])
+
+
+def resolve_epoch_log(exp_dir: Path) -> pd.DataFrame | None:
+    epoch_log_path = exp_dir / "epoch_log.csv"
+    if not epoch_log_path.exists():
+        return None
+    return pd.read_csv(epoch_log_path)
 
 
 def resolve_predictions(exp_dir: Path) -> Path | None:
@@ -247,20 +353,48 @@ def collect_epoch_dirs(model_name: str) -> list[tuple[str, Path, int]]:
 def collect_epoch_results() -> pd.DataFrame:
     rows = []
 
-    for model_name in ["baseline", "lora", "retrained", "retrained_lora"]:
+    for model_name in discover_model_families():
         for source, epoch_dir, epochs in collect_epoch_dirs(model_name):
             metrics = resolve_metrics(epoch_dir)
+            meta = infer_comparison_metadata(model_name, metrics)
+            epoch_log = resolve_epoch_log(epoch_dir)
+            if epoch_log is not None and not epoch_log.empty:
+                for _, row in epoch_log.iterrows():
+                    rows.append({
+                        "model": model_name,
+                        **meta,
+                        "epochs": int(row["epoch"]),
+                        "run_max_epochs": epochs,
+                        "source": source,
+                        "output_dir": str(epoch_dir),
+                        "accuracy": row.get("eval_accuracy"),
+                        "precision_macro": row.get("eval_precision_macro"),
+                        "recall_macro": row.get("eval_recall_macro"),
+                        "f1_macro": row.get("eval_f1_macro"),
+                        "f1_weighted": row.get("eval_f1_weighted"),
+                        "eval_loss": row.get("eval_loss"),
+                        "training_time_seconds": row.get("cumulative_training_seconds"),
+                        "epoch_duration_seconds": row.get("epoch_duration_seconds"),
+                    })
+                continue
+
             if metrics is None:
                 continue
             rows.append({
                 "model": model_name,
+                **meta,
                 "epochs": epochs,
+                "run_max_epochs": epochs,
                 "source": source,
                 "output_dir": str(epoch_dir),
-                "accuracy": metrics.get("test_accuracy"),
-                "f1_macro": metrics.get("test_f1_macro"),
-                "f1_weighted": metrics.get("test_f1_weighted"),
+                "accuracy": metrics.get("best_validation_accuracy", metrics.get("test_accuracy")),
+                "precision_macro": metrics.get("best_validation_precision_macro"),
+                "recall_macro": metrics.get("best_validation_recall_macro"),
+                "f1_macro": metrics.get("best_validation_f1_macro", metrics.get("test_f1_macro")),
+                "f1_weighted": metrics.get("best_validation_f1_weighted", metrics.get("test_f1_weighted")),
+                "eval_loss": metrics.get("best_validation_loss"),
                 "training_time_seconds": metrics.get("training_time_seconds"),
+                "epoch_duration_seconds": None,
                 "trainable_params": metrics.get("trainable_params"),
                 "trainable_pct": metrics.get("trainable_pct"),
                 "n_train": metrics.get("n_train"),
@@ -271,7 +405,7 @@ def collect_epoch_results() -> pd.DataFrame:
         return pd.DataFrame()
 
     df = pd.DataFrame(rows).sort_values(["epochs", "model", "source"]).reset_index(drop=True)
-    for col in ["accuracy", "f1_macro", "f1_weighted", "training_time_seconds", "trainable_pct"]:
+    for col in ["accuracy", "precision_macro", "recall_macro", "f1_macro", "f1_weighted", "eval_loss", "training_time_seconds", "epoch_duration_seconds", "trainable_pct"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
     return df
@@ -285,10 +419,12 @@ def build_epoch_wide_table(df: pd.DataFrame) -> pd.DataFrame:
         "model",
         "epochs",
         "accuracy",
+        "precision_macro",
+        "recall_macro",
         "f1_macro",
         "f1_weighted",
+        "eval_loss",
         "training_time_seconds",
-        "trainable_params",
     ]].copy()
 
     wide = subset.pivot(index="epochs", columns="model")
@@ -303,7 +439,7 @@ def print_epoch_summary(df: pd.DataFrame) -> None:
         return
 
     printable = df.copy()
-    for col in ["accuracy", "f1_macro", "f1_weighted"]:
+    for col in ["accuracy", "precision_macro", "recall_macro", "f1_macro", "f1_weighted", "eval_loss"]:
         printable[col] = printable[col].map(lambda x: f"{x:.4f}" if pd.notna(x) else "N/A")
     printable["training_time_seconds"] = printable["training_time_seconds"].map(
         lambda x: f"{x:.2f}" if pd.notna(x) else "N/A"
@@ -318,10 +454,12 @@ def print_epoch_summary(df: pd.DataFrame) -> None:
             "model",
             "epochs",
             "accuracy",
+            "precision_macro",
+            "recall_macro",
             "f1_macro",
             "f1_weighted",
+            "eval_loss",
             "training_time_seconds",
-            "trainable_params",
             "source",
         ]].to_string(index=False)
     )
@@ -340,12 +478,7 @@ def main():
     output_dir = DATA_PROCESSED / "evaluation"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    experiments = {
-        "baseline": resolve_experiment_dir("baseline"),
-        "lora": resolve_experiment_dir("lora"),
-        "retrained": resolve_experiment_dir("retrained"),
-        "retrained_lora": resolve_experiment_dir("retrained_lora"),
-    }
+    experiments = {name: resolve_experiment_dir(name) for name in discover_model_families()}
 
     results = {}
     detailed_results = {}
@@ -359,8 +492,10 @@ def main():
         diagnostics = None
         if predictions_path is not None:
             diagnostics = compute_prediction_diagnostics(pd.read_csv(predictions_path))
+        meta = infer_comparison_metadata(name, metrics)
 
         results[name] = {
+            **meta,
             "accuracy": metrics["test_accuracy"],
             "f1_macro": metrics["test_f1_macro"],
             "f1_weighted": metrics["test_f1_weighted"],
@@ -370,6 +505,7 @@ def main():
             "trainable_params": metrics.get("trainable_params"),
             "trainable_pct": metrics.get("trainable_pct"),
             "training_time_seconds": metrics.get("training_time_seconds"),
+            "uncertainty_source_model_id": metrics.get("uncertainty_source_model_id"),
         }
 
         detailed_results[name] = {
@@ -398,31 +534,46 @@ def main():
             )
 
     if "baseline" in results and "retrained" in results:
-        results["delta_retrained_vs_baseline"] = {
+        results["delta_baseline_uncertainty_vs_baseline"] = {
             "accuracy": results["retrained"]["accuracy"] - results["baseline"]["accuracy"],
             "f1_macro": results["retrained"]["f1_macro"] - results["baseline"]["f1_macro"],
             "f1_weighted": results["retrained"]["f1_weighted"] - results["baseline"]["f1_weighted"],
         }
 
-    for key in ["delta_lora_vs_baseline", "delta_retrained_vs_baseline"]:
+    if "lora" in results and "retrained_lora" in results:
+        lora_time = numeric_or_none(results["lora"].get("training_time_seconds"))
+        retrained_lora_time = numeric_or_none(results["retrained_lora"].get("training_time_seconds"))
+        results["delta_peft_uncertainty_vs_peft"] = {
+            "accuracy": results["retrained_lora"]["accuracy"] - results["lora"]["accuracy"],
+            "f1_macro": results["retrained_lora"]["f1_macro"] - results["lora"]["f1_macro"],
+            "f1_weighted": results["retrained_lora"]["f1_weighted"] - results["lora"]["f1_weighted"],
+        }
+        if lora_time is not None and retrained_lora_time is not None:
+            results["delta_peft_uncertainty_vs_peft"]["training_time_diff"] = retrained_lora_time - lora_time
+
+    for key in ["delta_lora_vs_baseline", "delta_baseline_uncertainty_vs_baseline", "delta_peft_uncertainty_vs_peft"]:
         if key in results:
             detailed_results[key] = results[key]
 
     # Noise stats
-    noise_summary = load_json_from_candidates([
-        DATA_PROCESSED / "noise" / "noise_summary.json",
-    ])
+    noise_summary = load_json_from_candidates([DATA_PROCESSED / "noise" / "noise_summary.json"])
+    noise_runs = collect_family_summaries(DATA_PROCESSED / "noise", "noise_summary.json")
     if noise_summary is not None:
         results["noise_detection"] = noise_summary
         detailed_results["noise_detection"] = noise_summary
+    if noise_runs:
+        results["noise_detection_runs"] = noise_runs
+        detailed_results["noise_detection_runs"] = noise_runs
 
     # Uncertainty stats
-    mc_summary = load_json_from_candidates([
-        DATA_PROCESSED / "uncertainty" / "mc_summary.json",
-    ])
+    mc_summary = load_json_from_candidates([DATA_PROCESSED / "uncertainty" / "mc_summary.json"])
+    mc_runs = collect_family_summaries(DATA_PROCESSED / "uncertainty", "mc_summary.json")
     if mc_summary is not None:
         results["uncertainty"] = mc_summary
         detailed_results["uncertainty"] = mc_summary
+    if mc_runs:
+        results["uncertainty_runs"] = mc_runs
+        detailed_results["uncertainty_runs"] = mc_runs
 
     # Save
     with open(output_dir / "evaluation_summary.json", "w", encoding="utf-8") as f:
@@ -430,6 +581,24 @@ def main():
 
     with open(output_dir / "evaluation_detailed.json", "w", encoding="utf-8") as f:
         json.dump(detailed_results, f, indent=2, ensure_ascii=False)
+
+    comparison_df = build_model_comparison_table(results)
+    if not comparison_df.empty:
+        comparison_df.to_csv(output_dir / "model_comparison_table.csv", index=False, encoding="utf-8")
+        comparison_df.to_json(
+            output_dir / "model_comparison_table.json",
+            orient="records",
+            indent=2,
+            force_ascii=False,
+        )
+        best_group_df = build_comparison_group_best_table(comparison_df)
+        best_group_df.to_csv(output_dir / "comparison_group_best.csv", index=False, encoding="utf-8")
+        best_group_df.to_json(
+            output_dir / "comparison_group_best.json",
+            orient="records",
+            indent=2,
+            force_ascii=False,
+        )
 
     epoch_df = collect_epoch_results()
     epoch_wide_df = build_epoch_wide_table(epoch_df)
@@ -446,7 +615,7 @@ def main():
     print("[EVAL] Evaluation Summary:")
     print(json.dumps(results, indent=2, ensure_ascii=False))
 
-    for name in ["baseline", "lora", "retrained", "retrained_lora"]:
+    for name in experiments.keys():
         if name not in detailed_results:
             continue
         diagnostics = detailed_results[name].get("diagnostics")
@@ -469,7 +638,7 @@ def main():
         print("\n" + "=" * 70)
         print(f"{'Experiment':<15} {'Accuracy':>10} {'F1 Macro':>10} {'F1 Weight':>10} {'Time (s)':>10} {'Params':>15}")
         print("-" * 70)
-        for name in ["baseline", "lora", "retrained", "retrained_lora"]:
+        for name in experiments.keys():
             if name in results:
                 r = results[name]
                 time_display = display_or_na(r.get("training_time_seconds"), 2)

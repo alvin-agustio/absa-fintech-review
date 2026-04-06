@@ -1,0 +1,4 @@
+aspect,aspect_label,negative_rows,specific_rows,generic_rows,specific_coverage_pct,top_issue,top_issue_count,top_issue_share_pct,top_specific_issue,top_specific_issue_count,aspect_presence_hit_rate_pct,generic_top_phrases
+risk,Risk,10454,8464,1990,81.0,"Limit, approval, dan pencairan",5385,51.5,"Limit, approval, dan pencairan",5385,68.5,"['bisa pakai', 'tapi bisa', 'bisa gunakan']"
+trust,Trust,3392,1829,1563,53.9,Belum cukup spesifik,1563,46.1,Transparansi dan kejelasan,582,45.8,"['jatuh tempo', 'tepat waktu', 'pernah telat']"
+service,Service,13676,6185,7491,45.2,Belum cukup spesifik,7491,54.8,Proses dan pencairan,2303,37.0,"['jatuh tempo', 'bisa pakai', 'pernah telat']"

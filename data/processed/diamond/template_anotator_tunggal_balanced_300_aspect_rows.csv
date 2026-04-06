@@ -1,4 +1,6 @@
-﻿"item_id","review_id","aspect","review_text","llm_label","label","aspect_present","confidence","notes"
+﻿
+
+"item_id","review_id","aspect","review_text","llm_label","label","aspect_present","confidence","notes"
 "1","231599","service","awalnya saya suka dng aplikasi ini sangat membantu tapi anehnya tagihan saya lunasi sblm tgl dan bulannya tapi malah di bekukan permanen...letak kesalahan saya di mana ya..? hrs bagus dong nasabah melunasi sblm tgl dan blnnya","Negative","Negative","1","3","keluhan jelas tentang pembekuan akun meski pembayaran dilakukan lebih cepat"
 "2","177349","service","sangat bagus dan membantu,namun saya tidak menemukan tombol untuk menhpus data. karena kredit / pinjaman saya tidak ada lagi saya mohon data saya jangan di salah gunakan.","Positive","Neutral","1","2","sentimen campuran; ada pujian tetapi ada keluhan fitur hapus data dan kekhawatiran data disalahgunakan"
 "3","115694","service","aplikasi gakjelas !!!! jangan download !!katanya pencairan 30menit ampe 3jam tidak cair² !!! hapus akun uinstall aplikasi !!!","Negative","Negative","1","3","keluhan kuat tentang pencairan yang tidak sesuai janji dan pengalaman layanan buruk"

@@ -1,0 +1,153 @@
+{
+  "generated_at": "2026-03-31T20:00:57",
+  "source_label": "latest cache pair: ff692c341dca_reviews.csv + ff692c341dca_predictions.csv",
+  "coverage": {
+    "rows": 18258,
+    "unique_reviews": 6086,
+    "apps": [
+      "Akulaku",
+      "Kredivo"
+    ],
+    "aspects": [
+      "risk",
+      "trust",
+      "service"
+    ],
+    "has_issue_column": false,
+    "has_dates": true,
+    "quality": "medium"
+  },
+  "status": "ready",
+  "warnings": [
+    "Tidak ada kolom issue, jadi bagian isu disederhanakan."
+  ],
+  "guardrails": [
+    {
+      "name": "both_apps_present",
+      "status": "pass",
+      "detail": "Kredivo dan Akulaku sama-sama muncul di summary."
+    },
+    {
+      "name": "app_order_is_kredivo_first",
+      "status": "pass",
+      "detail": "Urutan app sudah Kredivo lalu Akulaku."
+    },
+    {
+      "name": "app_cards_name_anchored",
+      "status": "pass",
+      "detail": "Setiap kartu app menyebut nama aplikasinya sendiri."
+    },
+    {
+      "name": "overall_mentions_anchor_aspects",
+      "status": "pass",
+      "detail": "Overall summary mengikat aspek kuat (Trust) dan aspek lemah (Risk)."
+    },
+    {
+      "name": "signal_mentions_worst_aspect",
+      "status": "pass",
+      "detail": "Blok sinyal menyorot aspek Risk sebagai prioritas."
+    },
+    {
+      "name": "meaning_mentions_app_contrast",
+      "status": "pass",
+      "detail": "Makna akhir sudah membedakan Kredivo dan Akulaku."
+    },
+    {
+      "name": "app_contrast_visible",
+      "status": "pass",
+      "detail": "Kontras app terlihat lewat gap sentimen (16.3 pts positif, 17.4 pts negatif), similarity teks 0.78."
+    },
+    {
+      "name": "issue_column_available",
+      "status": "info",
+      "detail": "Kolom issue tidak tersedia; summary memakai label aspek/hint sebagai fallback."
+    },
+    {
+      "name": "data_sufficiency",
+      "status": "pass",
+      "detail": "Ukuran data cukup untuk summary ringkas dan perbandingan app."
+    }
+  ],
+  "summary": {
+    "overall": {
+      "kind": "overall",
+      "title": "Gambaran Pengalaman",
+      "tone": "positive",
+      "text": "Secara umum, pengalaman pengguna cenderung positif dan terasa membantu untuk kebutuhan harian. Sisi yang paling sering dipuji ada pada aspek Trust.  Ini menunjukkan kejelasan proses dan rasa aman masih menjadi nilai yang cukup terasa. Tekanan terbesar ada pada aspek Risk. Dari dua aplikasi, Kredivo terlihat lebih stabil daripada Akulaku. Keluhan yang paling sering muncul terkait limit, approval, pencairan, dan biaya. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna.",
+      "body": "Secara umum, pengalaman pengguna cenderung positif dan terasa membantu untuk kebutuhan harian. Sisi yang paling sering dipuji ada pada aspek Trust.  Ini menunjukkan kejelasan proses dan rasa aman masih menjadi nilai yang cukup terasa. Tekanan terbesar ada pada aspek Risk. Dari dua aplikasi, Kredivo terlihat lebih stabil daripada Akulaku. Keluhan yang paling sering muncul terkait limit, approval, pencairan, dan biaya. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna.",
+      "evidence": [
+        "Dominan Positive 56.0%",
+        "Terkuat: Trust",
+        "Perlu perhatian: Risk"
+      ],
+      "metrics": {
+        "dominant_sentiment": "Positive",
+        "dominant_share": 56.0,
+        "best_aspect": "trust",
+        "worst_aspect": "risk",
+        "positive_share": 56.0,
+        "neutral_share": 7.3,
+        "negative_share": 36.7,
+        "unique_reviews": 6086
+      },
+      "app_name": null
+    },
+    "signal": {
+      "kind": "signal",
+      "title": "Sinyal yang Perlu Diperhatikan",
+      "tone": "negative",
+      "text": "Perhatian utama ada pada aspek Risk. Tekanan negatif paling kuat muncul di area limit, approval, pencairan, dan biaya. Keluhan yang paling sering muncul terkait limit, approval, pencairan, dan biaya. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Pergerakan sentimen relatif stabil dalam beberapa hari terakhir.",
+      "body": "Perhatian utama ada pada aspek Risk. Tekanan negatif paling kuat muncul di area limit, approval, pencairan, dan biaya. Keluhan yang paling sering muncul terkait limit, approval, pencairan, dan biaya. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Pergerakan sentimen relatif stabil dalam beberapa hari terakhir.",
+      "evidence": [
+        "Aspect: Risk",
+        "Negatif: 39.0%"
+      ],
+      "metrics": {
+        "aspect": "risk",
+        "negative_share": 39.0,
+        "rows": 6086,
+        "issue": null,
+        "trend": "Pergerakan sentimen relatif stabil dalam beberapa hari terakhir."
+      },
+      "app_name": null
+    },
+    "meaning": {
+      "kind": "meaning",
+      "title": "Makna Akhir",
+      "tone": "neutral",
+      "text": "Artinya, aplikasi ini sudah punya fondasi pengalaman yang cukup baik. Hal yang paling membantu ada pada aspek Trust, sementara titik yang paling sering memicu keluhan ada pada aspek Risk. Secara praktis, Kredivo terlihat lebih tenang, sedangkan Akulaku masih butuh perhatian lebih. Keluhan yang paling sering muncul terkait limit, approval, pencairan, dan biaya. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Kalau pola ini terus berulang, kualitas pengalaman pakai dan rasa percaya terhadap layanan bisa ikut melemah.",
+      "body": "Artinya, aplikasi ini sudah punya fondasi pengalaman yang cukup baik. Hal yang paling membantu ada pada aspek Trust, sementara titik yang paling sering memicu keluhan ada pada aspek Risk. Secara praktis, Kredivo terlihat lebih tenang, sedangkan Akulaku masih butuh perhatian lebih. Keluhan yang paling sering muncul terkait limit, approval, pencairan, dan biaya. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Kalau pola ini terus berulang, kualitas pengalaman pakai dan rasa percaya terhadap layanan bisa ikut melemah.",
+      "evidence": [],
+      "metrics": {
+        "dominant_sentiment": "Positive",
+        "best_aspect": "trust",
+        "worst_aspect": "risk"
+      },
+      "app_name": null
+    },
+    "apps": [
+      {
+        "app_name": "Kredivo",
+        "tone": "positive",
+        "dominant_sentiment": "Positive",
+        "positive_share": 63.4,
+        "neutral_share": 7.8,
+        "negative_share": 28.8,
+        "best_aspect": "trust",
+        "worst_aspect": "risk",
+        "body": "Di Kredivo, pengalaman pengguna cenderung positif dan cukup membantu untuk kebutuhan harian. Kekuatan paling terasa ada pada aspek Trust.  Ini menunjukkan kejelasan proses dan rasa aman masih menjadi nilai yang cukup terasa. Perhatian utama ada pada aspek Risk. Keluhan yang paling sering muncul terkait limit, approval, pencairan, dan biaya. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Pergerakan sentimen relatif stabil dalam beberapa hari terakhir."
+      },
+      {
+        "app_name": "Akulaku",
+        "tone": "neutral",
+        "dominant_sentiment": "Positive",
+        "positive_share": 47.1,
+        "neutral_share": 6.6,
+        "negative_share": 46.2,
+        "best_aspect": "trust",
+        "worst_aspect": "risk",
+        "body": "Di Akulaku, pengalaman pengguna masih campuran, tetapi sisi positif sedikit unggul dan cukup membantu untuk kebutuhan harian. Kekuatan paling terasa ada pada aspek Trust.  Ini menunjukkan kejelasan proses dan rasa aman masih menjadi nilai yang cukup terasa. Perhatian utama ada pada aspek Risk. Keluhan yang paling sering muncul terkait limit, approval, pencairan, dan biaya. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Tekanan negatif cenderung turun dalam beberapa hari terakhir."
+      }
+    ]
+  }
+}

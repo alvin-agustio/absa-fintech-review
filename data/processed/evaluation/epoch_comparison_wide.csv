@@ -1,0 +1,3 @@
+epochs,accuracy_baseline,accuracy_lora,precision_macro_baseline,precision_macro_lora,recall_macro_baseline,recall_macro_lora,f1_macro_baseline,f1_macro_lora,f1_weighted_baseline,f1_weighted_lora,eval_loss_baseline,eval_loss_lora,training_time_seconds_baseline,training_time_seconds_lora
+3,0.9585096596136155,0.9603495860165593,,,,,0.7968268758244902,0.7934498965601012,0.9563193129843769,0.9571961600550396,,,,1901.61
+5,0.9558417663293468,0.9612695492180313,,,,,0.7896015314859984,0.8030709540640083,0.9539264541509548,0.9588062965884516,,,,3226.14

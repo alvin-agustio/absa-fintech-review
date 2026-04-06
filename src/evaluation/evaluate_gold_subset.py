@@ -21,10 +21,25 @@ from config import GOLD_TEMPLATE_PATH, ID2LABEL, LABEL2ID, MAX_LENGTH, ROOT_DIR
 
 
 LABEL_ORDER = ["Negative", "Neutral", "Positive"]
-DEFAULT_THRESHOLDS = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+DEFAULT_THRESHOLDS = [0.5]
+PEFT_HINTS = ("lora", "dora", "qlora", "adalora")
 
 
 def default_model_specs() -> list[tuple[str, Path]]:
+    discovered: list[tuple[str, Path]] = []
+    active_models_root = ROOT_DIR / "models"
+    if active_models_root.exists():
+        for family_dir in sorted(active_models_root.iterdir()):
+            if not family_dir.is_dir() or family_dir.name == "archive":
+                continue
+            for epoch_dir in sorted(family_dir.glob("epoch_*")):
+                model_dir = epoch_dir / "model"
+                metrics_path = epoch_dir / "metrics.json"
+                if model_dir.exists() and metrics_path.exists():
+                    discovered.append((f"{family_dir.name}_{epoch_dir.name}", model_dir))
+        if discovered:
+            return discovered
+
     candidates = [
         (
             "baseline_epoch5",
@@ -96,6 +111,24 @@ def parse_model_specs(specs: list[str] | None) -> list[tuple[str, Path]]:
         name, raw_path = spec.split("=", 1)
         parsed.append((name.strip(), Path(raw_path).expanduser().resolve()))
     return parsed
+
+
+def infer_model_metadata(name: str) -> dict:
+    lowered = name.lower()
+    training_regime = "peft" if any(token in lowered for token in PEFT_HINTS) else "full_finetune"
+    uncertainty_enabled = ("retrained" in lowered) or lowered.endswith("_unc") or "_unc_" in lowered
+    comparison_group = "baseline"
+    if training_regime == "peft":
+        comparison_group = "peft"
+    if uncertainty_enabled and training_regime == "full_finetune":
+        comparison_group = "baseline_uncertainty"
+    elif uncertainty_enabled and training_regime == "peft":
+        comparison_group = "peft_uncertainty"
+    return {
+        "training_regime": training_regime,
+        "uncertainty_enabled": uncertainty_enabled,
+        "comparison_group": comparison_group,
+    }
 
 
 def load_gold_subset(path: Path) -> pd.DataFrame:
@@ -341,6 +374,7 @@ def evaluate_single_model(
 
     summary = {
         "model_name": name,
+        **infer_model_metadata(name),
         "model_dir": str(model_dir),
         "model_type": model_type,
         "n_rows": int(len(result_df)),
@@ -361,9 +395,21 @@ def make_overview_table(summaries: list[dict]) -> pd.DataFrame:
     rows = []
     for summary in summaries:
         best_presence = max(summary["aspect_presence_threshold_sweep"], key=lambda item: item["f1"])
+        model_name = summary["model_name"]
+        family = model_name.rsplit("_epoch", 1)[0] if "_epoch" in model_name else model_name
+        uncertainty_variant = (
+            "with_uncertainty"
+            if any(token in family for token in ["retrained", "_unc", "uncertainty"])
+            else "without_uncertainty"
+        )
         rows.append(
             {
                 "model_name": summary["model_name"],
+                "family": family,
+                "uncertainty_variant": uncertainty_variant,
+                "training_regime": summary.get("training_regime"),
+                "uncertainty_enabled": summary.get("uncertainty_enabled"),
+                "comparison_group": summary.get("comparison_group"),
                 "model_type": summary["model_type"],
                 "n_present": summary["n_present"],
                 "n_absent": summary["n_absent"],
@@ -383,6 +429,16 @@ def make_overview_table(summaries: list[dict]) -> pd.DataFrame:
     )
 
 
+def make_group_best_table(overview_df: pd.DataFrame) -> pd.DataFrame:
+    if overview_df.empty:
+        return overview_df
+    ranked = overview_df.sort_values(
+        by=["comparison_group", "sentiment_f1_macro_present", "best_presence_f1"],
+        ascending=[True, False, False],
+    )
+    return ranked.groupby("comparison_group", as_index=False).head(1).reset_index(drop=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Evaluate best ABSA models on the gold manual subset.")
     parser.add_argument("--gold_csv", default=str(GOLD_TEMPLATE_PATH))
@@ -391,6 +447,7 @@ def main():
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--max_length", type=int, default=MAX_LENGTH)
     parser.add_argument("--thresholds", nargs="*", type=float, default=DEFAULT_THRESHOLDS)
+    parser.add_argument("--presence_threshold_mode", choices=["fixed", "sweep"], default="fixed")
     parser.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
     parser.add_argument("--local_files_only", action="store_true")
     args = parser.parse_args()
@@ -398,6 +455,7 @@ def main():
     gold_path = Path(args.gold_csv).expanduser().resolve()
     output_dir = Path(args.output_dir).expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    thresholds = args.thresholds if args.presence_threshold_mode == "sweep" else [args.thresholds[0]]
 
     gold_df = load_gold_subset(gold_path)
     model_specs = parse_model_specs(args.model_spec)
@@ -437,7 +495,7 @@ def main():
                     batch_size=args.batch_size,
                     max_length=args.max_length,
                     device=device,
-                    thresholds=args.thresholds,
+                    thresholds=thresholds,
                     output_dir=output_dir,
                     local_files_only=args.local_files_only,
                 )
@@ -448,9 +506,13 @@ def main():
     overview_df = make_overview_table(summaries) if summaries else pd.DataFrame()
     if not overview_df.empty:
         overview_df.to_csv(output_dir / "gold_evaluation_overview.csv", index=False, encoding="utf-8")
+        group_best_df = make_group_best_table(overview_df)
+        group_best_df.to_csv(output_dir / "gold_evaluation_group_best.csv", index=False, encoding="utf-8")
 
     payload = {
         "gold_subset": gold_meta,
+        "presence_threshold_mode": args.presence_threshold_mode,
+        "thresholds_used": thresholds,
         "models_evaluated": summaries,
         "failures": failures,
     }

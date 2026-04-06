@@ -9,26 +9,24 @@ $valSize = 0.1
 $batchSize = 8
 $learningRate = 2e-5
 $seed = 42
-$epochsList = @(3, 5)
+$maxEpoch = 15
+$outputDir = "models/baseline/epoch_$maxEpoch"
 
-foreach ($epochs in $epochsList) {
-    $outputDir = "models/baseline/epoch_$epochs"
-    Write-Host "[BASELINE] Running epoch=$epochs -> $outputDir"
-    & $python src/training/train_baseline.py `
-        --input_csv $inputCsv `
-        --model_name $modelName `
-        --output_dir $outputDir `
-        --max_length $maxLength `
-        --test_size $testSize `
-        --val_size $valSize `
-        --epochs $epochs `
-        --batch_size $batchSize `
-        --lr $learningRate `
-        --seed $seed
+Write-Host "[BASELINE] Running max_epoch=$maxEpoch -> $outputDir"
+& $python src/training/train_baseline.py `
+    --input_csv $inputCsv `
+    --model_name $modelName `
+    --output_dir $outputDir `
+    --max_length $maxLength `
+    --test_size $testSize `
+    --val_size $valSize `
+    --epochs $maxEpoch `
+    --batch_size $batchSize `
+    --lr $learningRate `
+    --seed $seed
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "Baseline run failed for epoch=$epochs"
-    }
+if ($LASTEXITCODE -ne 0) {
+    throw "Baseline run failed for max_epoch=$maxEpoch"
 }
 
-Write-Host "[BASELINE] All runs completed successfully."
+Write-Host "[BASELINE] Run completed successfully."

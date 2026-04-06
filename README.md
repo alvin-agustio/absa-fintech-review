@@ -55,6 +55,8 @@ What is still ongoing:
 - final comparison on manually annotated gold data
 - stronger public demo assets such as screenshots and sample outputs
 
+For the canonical experiment procedure after taxonomy freeze, see `docs/MODEL_EPOCH_AND_EXPERIMENT_PROTOCOL_2026-03-31.md`. If you already have an `epoch_comparison_summary.csv`, the helper `scripts/recommend_epoch_from_epoch_sweep.py` can turn it into a readable epoch recommendation.
+
 ## Pipeline Overview
 
 ```mermaid

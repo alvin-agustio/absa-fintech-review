@@ -1,4 +1,4 @@
-﻿import argparse
+import argparse
 import json
 import time
 from pathlib import Path
@@ -6,8 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import accuracy_score, f1_score, classification_report
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
 from torch.utils.data import Dataset
 from transformers import (
     AutoModelForSequenceClassification,
@@ -18,8 +17,26 @@ from transformers import (
 )
 
 import sys
-sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[2]))
-from config import ASPECTS, BASE_MODEL_NAME, DATA_PROCESSED, MODELS_DIR, MAX_LENGTH, SEED
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2]))
+from config import (
+    ASPECTS,
+    BASE_MODEL_NAME,
+    DATA_PROCESSED,
+    FULL_FINETUNE_DEFAULT_LR,
+    MAX_LENGTH,
+    MODELS_DIR,
+    SEED,
+    TRAIN_BATCH_SIZE,
+    TRAIN_MAX_EPOCHS,
+)
+from src.training.run_utils import (
+    EpochTimingCallback,
+    build_epoch_log_df,
+    compute_macro_metrics,
+    review_level_split,
+    select_best_validation_epoch,
+    write_split_manifest,
+)
 
 LABEL2ID = {"Negative": 0, "Neutral": 1, "Positive": 2}
 ID2LABEL = {v: k for k, v in LABEL2ID.items()}
@@ -58,9 +75,7 @@ def build_absa_rows(df: pd.DataFrame) -> pd.DataFrame:
         rows.append(subset)
 
     combined = pd.concat(rows, ignore_index=True)
-    combined["task_text"] = (
-        "[ASPECT=" + combined["aspect"] + "] " + combined["review_text"].astype(str)
-    )
+    combined["task_text"] = "[ASPECT=" + combined["aspect"] + "] " + combined["review_text"].astype(str)
     combined["label_id"] = combined["label"].map(LABEL2ID)
     combined = combined.dropna(subset=["task_text", "label_id"]).reset_index(drop=True)
     combined["label_id"] = combined["label_id"].astype(int)
@@ -70,27 +85,22 @@ def build_absa_rows(df: pd.DataFrame) -> pd.DataFrame:
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
-    return {
-        "accuracy": accuracy_score(labels, predictions),
-        "f1_macro": f1_score(labels, predictions, average="macro"),
-        "f1_weighted": f1_score(labels, predictions, average="weighted"),
-    }
+    return compute_macro_metrics(labels, predictions)
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Train deterministic baseline IndoBERT for ABSA weak labels"
-    )
+    parser = argparse.ArgumentParser(description="Train deterministic baseline IndoBERT for ABSA weak labels")
     parser.add_argument("--input_csv", default=str(DATA_PROCESSED / "dataset_absa_50k_v2_intersection.csv"))
     parser.add_argument("--model_name", default=BASE_MODEL_NAME)
     parser.add_argument("--output_dir", default=str(MODELS_DIR / "baseline"))
     parser.add_argument("--max_length", type=int, default=MAX_LENGTH)
     parser.add_argument("--test_size", type=float, default=0.2)
     parser.add_argument("--val_size", type=float, default=0.1)
-    parser.add_argument("--epochs", type=int, default=2)
-    parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--lr", type=float, default=2e-5)
+    parser.add_argument("--epochs", type=int, default=TRAIN_MAX_EPOCHS)
+    parser.add_argument("--batch_size", type=int, default=TRAIN_BATCH_SIZE)
+    parser.add_argument("--lr", type=float, default=FULL_FINETUNE_DEFAULT_LR)
     parser.add_argument("--seed", type=int, default=SEED)
+    parser.add_argument("--experiment_family", default="baseline")
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -103,40 +113,19 @@ def main():
     if len(data) < 30:
         raise ValueError("Data berlabel terlalu sedikit untuk training baseline.")
 
-    train_df, test_df = train_test_split(
+    train_df, val_df, test_df = review_level_split(
         data,
+        seed=args.seed,
         test_size=args.test_size,
-        random_state=args.seed,
-        stratify=data["label_id"],
+        val_size=args.val_size,
     )
-
-    train_df, val_df = train_test_split(
-        train_df,
-        test_size=args.val_size,
-        random_state=args.seed,
-        stratify=train_df["label_id"],
-    )
+    split_manifest = write_split_manifest(output_dir, train_df, val_df, test_df)
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
-    train_enc = tokenizer(
-        train_df["task_text"].tolist(),
-        truncation=True,
-        padding=True,
-        max_length=args.max_length,
-    )
-    val_enc = tokenizer(
-        val_df["task_text"].tolist(),
-        truncation=True,
-        padding=True,
-        max_length=args.max_length,
-    )
-    test_enc = tokenizer(
-        test_df["task_text"].tolist(),
-        truncation=True,
-        padding=True,
-        max_length=args.max_length,
-    )
+    train_enc = tokenizer(train_df["task_text"].tolist(), truncation=True, padding=True, max_length=args.max_length)
+    val_enc = tokenizer(val_df["task_text"].tolist(), truncation=True, padding=True, max_length=args.max_length)
+    test_enc = tokenizer(test_df["task_text"].tolist(), truncation=True, padding=True, max_length=args.max_length)
 
     train_dataset = ABSADataset(train_enc, train_df["label_id"].tolist())
     val_dataset = ABSADataset(val_enc, val_df["label_id"].tolist())
@@ -166,33 +155,59 @@ def main():
         save_total_limit=2,
     )
 
+    timing_callback = EpochTimingCallback()
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
         compute_metrics=compute_metrics,
+        callbacks=[timing_callback],
     )
 
     start_time = time.time()
     trainer.train()
     train_time = time.time() - start_time
 
+    epoch_log_df = build_epoch_log_df(trainer.state.log_history, timing_callback)
+    if not epoch_log_df.empty:
+        epoch_log_df.to_csv(output_dir / "epoch_log.csv", index=False)
+    best_validation = select_best_validation_epoch(epoch_log_df) or {}
+
     test_output = trainer.predict(test_dataset)
-    test_logits = test_output.predictions
     y_true = np.array(test_df["label_id"].tolist())
-    y_pred = np.argmax(test_logits, axis=1)
+    y_pred = np.argmax(test_output.predictions, axis=1)
+    test_metrics = compute_macro_metrics(y_true, y_pred)
 
     metrics = {
-        "test_accuracy": float(accuracy_score(y_true, y_pred)),
-        "test_f1_macro": float(f1_score(y_true, y_pred, average="macro")),
-        "test_f1_weighted": float(f1_score(y_true, y_pred, average="weighted")),
+        "experiment_family": args.experiment_family,
+        "training_regime": "full_finetune",
+        "uncertainty_enabled": False,
+        "test_accuracy": test_metrics["accuracy"],
+        "test_precision_macro": test_metrics["precision_macro"],
+        "test_recall_macro": test_metrics["recall_macro"],
+        "test_f1_macro": test_metrics["f1_macro"],
+        "test_f1_weighted": test_metrics["f1_weighted"],
+        "best_epoch": int(best_validation["epoch"]) if best_validation.get("epoch") is not None else None,
+        "best_checkpoint": str(trainer.state.best_model_checkpoint) if trainer.state.best_model_checkpoint else None,
+        "best_validation_accuracy": best_validation.get("eval_accuracy"),
+        "best_validation_precision_macro": best_validation.get("eval_precision_macro"),
+        "best_validation_recall_macro": best_validation.get("eval_recall_macro"),
+        "best_validation_f1_macro": best_validation.get("eval_f1_macro"),
+        "best_validation_f1_weighted": best_validation.get("eval_f1_weighted"),
+        "best_validation_loss": best_validation.get("eval_loss"),
+        "train_start_timestamp": timing_callback.train_start_timestamp,
+        "train_end_timestamp": timing_callback.train_end_timestamp,
         "n_train": int(len(train_df)),
         "n_val": int(len(val_df)),
         "n_test": int(len(test_df)),
+        "n_train_reviews": int(train_df["review_id"].nunique()),
+        "n_val_reviews": int(val_df["review_id"].nunique()),
+        "n_test_reviews": int(test_df["review_id"].nunique()),
         "training_time_seconds": round(train_time, 2),
         "label_distribution": data["label"].value_counts().to_dict(),
         "aspect_distribution": data["aspect"].value_counts().to_dict(),
+        "split_manifest": split_manifest,
     }
 
     report_text = classification_report(
@@ -200,6 +215,7 @@ def main():
         y_pred,
         target_names=[ID2LABEL[i] for i in range(3)],
         digits=4,
+        zero_division=0,
     )
 
     trainer.save_model(str(output_dir / "model"))

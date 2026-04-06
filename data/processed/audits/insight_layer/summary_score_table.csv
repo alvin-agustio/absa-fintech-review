@@ -1,0 +1,4 @@
+aspect,positive_share,neutral_share,negative_share,dominant_sentiment,dominant_share,rows
+risk,22.0,5.2,72.8,Negative,72.8,14360
+trust,38.5,2.9,58.7,Negative,58.7,5783
+service,57.5,1.4,41.2,Positive,57.5,33223

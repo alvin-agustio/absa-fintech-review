@@ -1,0 +1,88 @@
+{
+  "input_csv": "C:\\Users\\alvin\\Downloads\\skripsi\\data\\processed\\dataset_absa_50k_v2_intersection.csv",
+  "rows_long": 53366,
+  "unique_reviews": 42313,
+  "apps": [
+    "Akulaku",
+    "Kredivo"
+  ],
+  "summary_audit": {
+    "status": "ready",
+    "quality": "high",
+    "warnings": [],
+    "expected_focus_aspect": "risk",
+    "reported_focus_aspect": "risk",
+    "focus_matches_negative_leader": true,
+    "expected_best_aspect": "service",
+    "reported_best_aspect": "service",
+    "best_matches_positive_leader": true,
+    "reported_worst_aspect": "risk",
+    "meaning_worst_aspect": "risk",
+    "app_cards": 2,
+    "overall_text": "Secara umum, pengalaman pengguna masih campuran, tetapi tekanan negatif sedikit unggul dan lebih sering diwarnai keluhan daripada pujian. Sisi yang paling sering dipuji ada pada aspek Service.  Ini menunjukkan pengalaman penggunaan sehari-hari masih terasa membantu dan praktis. Tekanan terbesar ada pada aspek Risk. Dari dua aplikasi, Kredivo terlihat lebih stabil daripada Akulaku. Keluhan yang paling sering muncul terkait Limit, approval, dan pencairan. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna.",
+    "signal_text": "Perhatian utama ada pada aspek Risk. Tekanan negatif paling kuat muncul di area limit, approval, pencairan, dan biaya. Keluhan yang paling sering muncul terkait Limit, approval, dan pencairan. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Pergerakan sentimen relatif stabil dalam beberapa hari terakhir.",
+    "meaning_text": "Artinya, aplikasi ini punya nilai praktis, tetapi tekanan negatifnya masih cukup terasa. Hal yang paling membantu ada pada aspek Service, sementara titik yang paling sering memicu keluhan ada pada aspek Risk. Secara praktis, Kredivo terlihat lebih tenang, sedangkan Akulaku masih butuh perhatian lebih. Keluhan yang paling sering muncul terkait Limit, approval, dan pencairan. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Kalau pola ini terus berulang, kualitas pengalaman pakai dan rasa percaya terhadap layanan bisa ikut melemah."
+  },
+  "issue_snapshot": [
+    {
+      "aspect": "risk",
+      "top_issue": "Limit, approval, dan pencairan",
+      "issue_share_pct": 51.5,
+      "generic_share_pct": 19.0,
+      "negative_rows": 10454
+    },
+    {
+      "aspect": "trust",
+      "top_issue": "Belum cukup spesifik",
+      "issue_share_pct": 46.1,
+      "generic_share_pct": 46.1,
+      "negative_rows": 3392
+    },
+    {
+      "aspect": "service",
+      "top_issue": "Belum cukup spesifik",
+      "issue_share_pct": 54.8,
+      "generic_share_pct": 54.8,
+      "negative_rows": 13676
+    }
+  ],
+  "app_summary_audit": [
+    {
+      "app_name": "Akulaku",
+      "status": "ready",
+      "quality": "high",
+      "warnings": [],
+      "expected_focus_aspect": "risk",
+      "reported_focus_aspect": "risk",
+      "focus_matches_negative_leader": true,
+      "expected_best_aspect": "service",
+      "reported_best_aspect": "service",
+      "best_matches_positive_leader": true,
+      "reported_worst_aspect": "risk",
+      "meaning_worst_aspect": "risk",
+      "app_cards": 1,
+      "overall_text": "Secara umum, pengalaman pengguna cenderung negatif dan lebih sering diwarnai keluhan daripada pujian. Sisi yang paling sering dipuji ada pada aspek Service.  Ini menunjukkan pengalaman penggunaan sehari-hari masih terasa membantu dan praktis. Tekanan terbesar ada pada aspek Risk. Keluhan yang paling sering muncul terkait Limit, approval, dan pencairan. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna.",
+      "signal_text": "Perhatian utama ada pada aspek Risk. Tekanan negatif paling kuat muncul di area limit, approval, pencairan, dan biaya. Keluhan yang paling sering muncul terkait Limit, approval, dan pencairan. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Pergerakan sentimen relatif stabil dalam beberapa hari terakhir.",
+      "meaning_text": "Artinya, aplikasi ini punya nilai praktis, tetapi pengalaman belum sepenuhnya stabil. Hal yang paling membantu ada pada aspek Service, sementara titik yang paling sering memicu keluhan ada pada aspek Risk. Keluhan yang paling sering muncul terkait Limit, approval, dan pencairan. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Kalau pola ini terus berulang, kualitas pengalaman pakai dan rasa percaya terhadap layanan bisa ikut melemah."
+    },
+    {
+      "app_name": "Kredivo",
+      "status": "ready",
+      "quality": "high",
+      "warnings": [],
+      "expected_focus_aspect": "risk",
+      "reported_focus_aspect": "risk",
+      "focus_matches_negative_leader": true,
+      "expected_best_aspect": "service",
+      "reported_best_aspect": "service",
+      "best_matches_positive_leader": true,
+      "reported_worst_aspect": "risk",
+      "meaning_worst_aspect": "risk",
+      "app_cards": 1,
+      "overall_text": "Secara umum, pengalaman pengguna masih campuran, tetapi sisi positif sedikit unggul dan terasa membantu untuk kebutuhan harian. Sisi yang paling sering dipuji ada pada aspek Service.  Ini menunjukkan pengalaman penggunaan sehari-hari masih terasa membantu dan praktis. Tekanan terbesar ada pada aspek Risk. Keluhan yang paling sering muncul terkait Limit, approval, dan pencairan. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna.",
+      "signal_text": "Perhatian utama ada pada aspek Risk. Tekanan negatif paling kuat muncul di area limit, approval, pencairan, dan biaya. Keluhan yang paling sering muncul terkait Limit, approval, dan pencairan. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Tekanan negatif cenderung naik dalam beberapa hari terakhir.",
+      "meaning_text": "Artinya, aplikasi ini punya fondasi pengalaman yang cukup baik, tetapi belum sepenuhnya stabil. Hal yang paling membantu ada pada aspek Service, sementara titik yang paling sering memicu keluhan ada pada aspek Risk. Keluhan yang paling sering muncul terkait Limit, approval, dan pencairan. Ini menunjukkan proses pembiayaan masih belum selalu terasa mulus, jelas, atau menenangkan bagi pengguna. Kalau pola ini terus berulang, kualitas pengalaman pakai dan rasa percaya terhadap layanan bisa ikut melemah."
+    }
+  ],
+  "manual_review_examples_rows": 45
+}

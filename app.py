@@ -38,6 +38,11 @@ from src.dashboard.research import load_gold_summary, load_gold_subset, load_wea
 from src.dashboard.storage import DashboardStore
 from src.inference import ABSAPredictor
 
+try:
+    from src.dashboard.summary_rules import build_summary_payload as dashboard_summary_payload
+except ImportError:
+    dashboard_summary_payload = None
+
 
 st.set_page_config(
     page_title="Fintech Sentiment Observatory",
@@ -201,9 +206,11 @@ h1, h2, h3 {
   border: 1px solid transparent !important;
   border-radius: 18px !important;
   box-shadow: none;
+  margin-top: 0.35rem;
+  margin-bottom: 0.55rem;
 }
 [data-testid="stExpanderDetails"] {
-  padding-top: 0.35rem;
+  padding-top: 0.55rem;
 }
 [data-testid="stDataFrame"],
 [data-testid="stTable"] {
@@ -275,6 +282,16 @@ h1, h2, h3 {
   color: #256342;
   border-color: rgba(47, 127, 82, 0.18);
 }
+.pill-positive {
+  background: rgba(47, 127, 82, 0.12);
+  color: #256342;
+  border-color: rgba(47, 127, 82, 0.22);
+}
+.pill-negative {
+  background: rgba(180, 78, 52, 0.12);
+  color: #933b26;
+  border-color: rgba(180, 78, 52, 0.22);
+}
 .pill-neutral {
   background: rgba(81, 84, 78, 0.08);
   color: #50544e;
@@ -285,19 +302,20 @@ h1, h2, h3 {
   border: 1px solid rgba(216, 210, 198, 0.88);
   border-radius: 18px;
   padding: 0.95rem 1rem;
-  min-height: 320px;
+  min-height: 296px;
+  margin: 0.2rem 0 0.7rem 0;
 }
 .issue-card .card-title {
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.3rem;
   font-size: 1.1rem;
 }
 .issue-row {
-  padding: 0.7rem 0 0.72rem 0;
+  padding: 0.58rem 0 0.6rem 0;
   border-top: 1px solid rgba(216, 210, 198, 0.65);
 }
 .issue-row:first-of-type {
   border-top: none;
-  padding-top: 0.25rem;
+  padding-top: 0.15rem;
 }
 .issue-title {
   font-weight: 700;
@@ -313,19 +331,19 @@ h1, h2, h3 {
   color: var(--muted);
   line-height: 1.45;
   font-size: 0.8rem;
-  margin-top: 0.18rem;
+  margin-top: 0.12rem;
 }
 .trust-note {
   background: rgba(42, 47, 69, 0.06);
   border: 1px dashed rgba(42, 47, 69, 0.16);
   border-radius: 14px;
-  padding: 0.72rem 0.8rem;
+  padding: 0.68rem 0.78rem;
   color: var(--muted);
   font-size: 0.81rem;
   line-height: 1.45;
 }
 .issue-card .trust-note {
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.3rem;
 }
 .evidence-card {
   background: linear-gradient(180deg, rgba(255,255,255,0.84), rgba(251,247,239,0.96));
@@ -426,6 +444,7 @@ h1, h2, h3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.1rem;
   margin-top: 0.9rem;
+  margin-bottom: 0.35rem;
 }
 .health-card {
   background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(252,248,241,0.92));
@@ -447,16 +466,13 @@ h1, h2, h3 {
   font-weight: 700;
   color: var(--ink);
 }
-.health-score {
-  font-family: 'Outfit', sans-serif;
-  font-size: 2.35rem;
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1;
-  margin-top: 0.18rem;
-}
 .health-meta {
   text-align: right;
+}
+.health-balance {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
 }
 .health-bars {
   display: grid;
@@ -500,17 +516,60 @@ h1, h2, h3 {
 .health-footer {
   margin-top: 0.75rem;
 }
+.sentiment-stack {
+  display: flex;
+  width: 100%;
+  height: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(81, 84, 78, 0.08);
+  border: 1px solid rgba(216, 210, 198, 0.7);
+}
+.sentiment-segment {
+  height: 100%;
+}
+.sentiment-segment-positive {
+  background: linear-gradient(90deg, #8dd6a6, #2f7f52);
+}
+.sentiment-segment-neutral {
+  background: linear-gradient(90deg, #c8ccd2, #8c8f95);
+}
+.sentiment-segment-negative {
+  background: linear-gradient(90deg, #e19a86, #b44e34);
+}
+.sentiment-legend {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+}
+.sentiment-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.sentiment-legend-label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.sentiment-legend-value {
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.85rem;
+  margin-top: 0.72rem;
+  margin-bottom: 0.25rem;
 }
 .summary-card {
   background: rgba(255,255,255,0.68);
   border: 1px solid rgba(216, 210, 198, 0.88);
   border-radius: 14px;
-  padding: 0.85rem 0.9rem;
+  padding: 0.82rem 0.88rem;
 }
 .summary-title {
   color: var(--muted);
@@ -525,28 +584,304 @@ h1, h2, h3 {
   font-size: 1.15rem;
   font-weight: 700;
 }
-.insight-list {
+.diagnosis-shell {
   display: grid;
-  gap: 0.85rem;
-  margin-top: 0.9rem;
+  gap: 0.75rem;
 }
-.insight-item {
-  background: rgba(255,255,255,0.78);
-  border: 1px solid rgba(216, 210, 198, 0.88);
-  border-left: 4px solid rgba(42, 47, 69, 0.4);
-  border-radius: 14px;
-  padding: 0.8rem 0.9rem;
+.diagnosis-summary {
+  background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(252,248,241,0.92));
+  border: 1px solid rgba(216, 210, 198, 0.95);
+  border-radius: 18px;
+  padding: 0.92rem 0.95rem 0.9rem 0.95rem;
+  min-height: 272px;
+  margin-bottom: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.58rem;
+}
+.diagnosis-lead {
   color: var(--ink);
-  font-size: 0.95rem;
+  font-size: 0.93rem;
+  line-height: 1.55;
+  font-weight: 600;
+  margin-top: 0.12rem;
+  min-height: 4.7rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.diagnosis-rows {
+  display: grid;
+  gap: 0.44rem;
+  margin-top: 0.1rem;
+}
+.diagnosis-row {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: center;
+  min-height: 3.05rem;
+  padding-top: 0.44rem;
+  border-top: 1px solid rgba(216, 210, 198, 0.55);
+}
+.diagnosis-row:first-child {
+  padding-top: 0.05rem;
+  border-top: none;
+}
+.diagnosis-row-label {
+  color: var(--muted);
+  font-size: 0.77rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.diagnosis-row-value {
+  color: var(--ink);
+  font-size: 0.87rem;
   line-height: 1.5;
+  min-width: 0;
+  min-height: 2.45rem;
+  display: flex;
+  align-items: center;
+}
+.diagnosis-row-value-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.diagnosis-distribution {
+  display: grid;
+  gap: 0.2rem;
+  min-height: 2.45rem;
+}
+.diagnosis-dist-line {
+  color: var(--ink);
+  font-size: 0.84rem;
+  line-height: 1.4;
+  font-weight: 600;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  width: fit-content;
+}
+.diagnosis-dist-line-negative {
+  color: #8f4734;
+  background: rgba(180, 78, 52, 0.10);
+  border: 1px solid rgba(180, 78, 52, 0.16);
+}
+.diagnosis-dist-line-positive {
+  color: #2c6a47;
+  background: rgba(47, 127, 82, 0.10);
+  border: 1px solid rgba(47, 127, 82, 0.16);
+}
+.diagnosis-detail-stack {
+  display: grid;
+  gap: 0.32rem;
+  margin-top: 0.15rem;
+}
+.diagnosis-copy {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin-top: 0.45rem;
+}
+.example-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 0.45rem;
+}
+.example-section {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.7rem;
+}
+.example-section:first-child {
+  margin-top: 0.05rem;
+}
+.example-section-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0.05rem 0 0 0;
+}
+.example-section-note {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0.06rem 0 0.55rem 0;
+}
+.example-column {
+  display: grid;
+  gap: 0.6rem;
+}
+.example-column-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.example-card {
+  background: rgba(255,255,255,0.8);
+  border: 1px solid rgba(216, 210, 198, 0.9);
+  border-radius: 16px;
+  padding: 0.8rem 0.85rem;
+  box-shadow: 0 8px 18px rgba(31, 33, 30, 0.04);
+}
+.example-card-positive {
+  border-top: 3px solid rgba(47, 127, 82, 0.65);
+}
+.example-card-neutral {
+  border-top: 3px solid rgba(140, 143, 149, 0.7);
+}
+.example-card-negative {
+  border-top: 3px solid rgba(180, 78, 52, 0.65);
+}
+.example-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin-bottom: 0.45rem;
+}
+.example-quote {
+  color: var(--ink);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.example-native-card {
+  background: rgba(255,255,255,0.82);
+  border: 1px solid rgba(216, 210, 198, 0.9);
+  border-radius: 16px;
+  padding: 0.82rem 0.9rem;
+  box-shadow: 0 8px 18px rgba(31, 33, 30, 0.04);
+  margin: 0 0 0.72rem 0;
+}
+.example-native-card-positive {
+  border-top: 3px solid rgba(47, 127, 82, 0.68);
+}
+.example-native-card-neutral {
+  border-top: 3px solid rgba(140, 143, 149, 0.72);
+}
+.example-native-card-negative {
+  border-top: 3px solid rgba(180, 78, 52, 0.68);
+}
+.example-native-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin-bottom: 0.45rem;
+}
+.example-native-text {
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.conclusion-stack {
+  display: grid;
+  gap: 0.72rem;
+}
+.conclusion-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.84rem;
+}
+.conclusion-grid-1 {
+  display: grid;
+  gap: 0.72rem;
+}
+.conclusion-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(252,248,241,0.92));
+  border: 1px solid rgba(216, 210, 198, 0.95);
+  border-radius: 18px;
+  padding: 0.98rem 1.05rem;
+  margin: 0;
+  min-height: 204px;
+  display: flex;
+  flex-direction: column;
+}
+.conclusion-card-lead {
+  border-top: 5px solid rgba(42, 47, 69, 0.28);
+}
+.conclusion-card-app {
+  border-top: 4px solid rgba(42, 47, 69, 0.22);
+}
+.conclusion-card-focus {
+  border-top: 4px solid rgba(180, 78, 52, 0.7);
+}
+.conclusion-card-close {
+  border-top: 4px solid rgba(140, 143, 149, 0.72);
+}
+.conclusion-card-positive {
+  border-top: 4px solid rgba(47, 127, 82, 0.7);
+}
+.conclusion-card-neutral {
+  border-top: 4px solid rgba(140, 143, 149, 0.72);
+}
+.conclusion-card-negative {
+  border-top: 4px solid rgba(180, 78, 52, 0.7);
+}
+.conclusion-title {
+  color: var(--ink);
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.03rem;
+  font-weight: 700;
+  margin: 0.12rem 0 0.32rem 0;
+}
+.conclusion-copy {
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.58;
+  margin-top: 0.22rem;
+}
+.conclusion-lead {
+  margin-top: 0.2rem;
+  color: var(--ink);
+  font-size: 0.94rem;
+  line-height: 1.56;
+  font-weight: 600;
+}
+.conclusion-subline {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.52;
+  margin-top: 0.34rem;
+}
+.conclusion-evidence-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+  margin-top: 0.72rem;
+  margin-top: auto;
+  padding-top: 0.72rem;
+}
+.conclusion-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.52rem;
+  border-radius: 999px;
+  background: rgba(42, 47, 69, 0.05);
+  border: 1px solid rgba(42, 47, 69, 0.12);
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.2;
+  font-weight: 600;
+}
+.section-spacer-sm {
+  height: 0.12rem;
+}
+.section-spacer-md {
+  height: 0.6rem;
 }
 @media (max-width: 1100px) {
-  .scope-grid, .health-grid, .summary-grid {
+  .scope-grid, .health-grid, .summary-grid, .example-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
 @media (max-width: 760px) {
-  .scope-grid, .health-grid, .summary-grid {
+  .scope-grid, .health-grid, .summary-grid, .example-grid {
     grid-template-columns: 1fr;
   }
   .health-row {
@@ -560,6 +895,8 @@ h1, h2, h3 {
 
 
 ASPECT_COLOR_MAP = {"service": "#2f7f52", "trust": "#1b7286", "risk": "#b44e34"}
+SENTIMENT_COLOR_MAP = {"Positive": "#2f7f52", "Neutral": "#8c8f95", "Negative": "#b44e34"}
+ASPECT_LABEL_MAP = {"risk": "Risk", "trust": "Trust", "service": "Service"}
 STOPWORDS = {
     "yang", "dan", "di", "ke", "dari", "ini", "itu", "untuk", "dengan", "karena", "pada", "nya", "saya", "aku",
     "kami", "kita", "anda", "kalian", "the", "a", "is", "are", "app", "aplikasi", "kredivo", "akulaku", "aja",
@@ -680,23 +1017,19 @@ def benchmark_rows_available(compare_df: pd.DataFrame) -> tuple[pd.DataFrame, pd
     return gold_ready, weak_ready
 
 
-def radar_frame(long_df: pd.DataFrame) -> pd.DataFrame:
-    if long_df.empty:
-        return pd.DataFrame(columns=["aspect", "sentiment_index", "negative_pressure"])
-    summary = (
-        long_df.assign(is_negative=long_df["pred_label"].eq("Negative").astype(int))
-        .groupby("aspect", as_index=False)
-        .agg(sentiment_mean=("sentiment_score", "mean"), negative_share=("is_negative", "mean"))
-    )
-    summary["sentiment_index"] = (summary["sentiment_mean"] + 1.0) * 50.0
-    summary["negative_pressure"] = summary["negative_share"] * 100.0
-    summary["aspect"] = pd.Categorical(summary["aspect"], categories=ASPECT_ORDER, ordered=True)
-    return summary.sort_values("aspect").reset_index(drop=True)
-
-
 def aspect_score_table(long_df: pd.DataFrame) -> pd.DataFrame:
     if long_df.empty:
-        return pd.DataFrame(columns=["aspect", "score", "positive_share", "neutral_share", "negative_share", "status"])
+        return pd.DataFrame(
+            columns=[
+                "aspect",
+                "positive_share",
+                "neutral_share",
+                "negative_share",
+                "dominant_sentiment",
+                "dominant_share",
+                "balance_note",
+            ]
+        )
 
     pivot = (
         long_df.groupby(["aspect", "pred_label"], as_index=False)
@@ -713,25 +1046,37 @@ def aspect_score_table(long_df: pd.DataFrame) -> pd.DataFrame:
     pos_share = (pivot["Positive"] / total).fillna(0)
     neg_share = (pivot["Negative"] / total).fillna(0)
     neu_share = (pivot["Neutral"] / total).fillna(0)
-    score = ((pos_share - neg_share + 1) * 50).clip(lower=0, upper=100)
+    dominant_sentiment = pd.DataFrame(
+        {"Positive": pos_share, "Neutral": neu_share, "Negative": neg_share}
+    ).idxmax(axis=1)
+    dominant_share = pd.DataFrame(
+        {"Positive": pos_share, "Neutral": neu_share, "Negative": neg_share}
+    ).max(axis=1)
 
-    def status(score_value: int) -> str:
-        if score_value >= 70:
-            return "Baik"
-        if score_value >= 55:
-            return "Stabil"
-        return "Perlu perhatian"
+    def balance_note(positive: float, neutral: float, negative: float) -> str:
+        top_share = max(positive, neutral, negative)
+        if top_share < 0.45:
+            return "Komposisi masih campuran"
+        if negative >= positive and negative >= neutral:
+            return "Negatif paling dominan"
+        if positive >= negative and positive >= neutral:
+            return "Positif paling dominan"
+        return "Netral paling dominan"
 
     out = pd.DataFrame(
         {
             "aspect": pivot.index,
-            "score": score.round(0).astype(int),
             "positive_share": (pos_share * 100).round(0).astype(int),
             "neutral_share": (neu_share * 100).round(0).astype(int),
             "negative_share": (neg_share * 100).round(0).astype(int),
+            "dominant_sentiment": dominant_sentiment,
+            "dominant_share": (dominant_share * 100).round(0).astype(int),
         }
     ).reset_index(drop=True)
-    out["status"] = out["score"].map(status)
+    out["balance_note"] = [
+        balance_note(float(pos), float(neu), float(neg))
+        for pos, neu, neg in zip(pos_share.tolist(), neu_share.tolist(), neg_share.tolist())
+    ]
     out["aspect"] = pd.Categorical(out["aspect"], categories=["risk", "trust", "service"], ordered=True)
     return out.sort_values("aspect").reset_index(drop=True)
 
@@ -917,94 +1262,6 @@ def render_sentiment_wordcloud(long_df: pd.DataFrame, sentiment: str) -> None:
     )
     fig.update_traces(marker_color="#4f6f8f")
     st.plotly_chart(chart_theme(fig), use_container_width=True)
-
-
-def rule_based_insights(long_df: pd.DataFrame, score_df: pd.DataFrame, wide_df: pd.DataFrame) -> list[str]:
-    if long_df.empty or score_df.empty or wide_df.empty:
-        return ["Belum ada data cukup untuk disimpulkan."]
-
-    insights: list[str] = []
-    sentiment_share = (
-        long_df["pred_label"].value_counts(normalize=True).mul(100).round(1).to_dict()
-    )
-    dominant = max(sentiment_share, key=sentiment_share.get)
-    insights.append(f"Iklim sentimen saat ini didominasi {dominant} ({sentiment_share.get(dominant, 0)}%).")
-
-    risk_row = score_df[score_df["aspect"] == "risk"]
-    if not risk_row.empty and int(risk_row.iloc[0]["negative_share"]) >= 35:
-        insights.append(f"Aspek risk menunjukkan tekanan tinggi: {int(risk_row.iloc[0]['negative_share'])}% komentar bernada negatif.")
-
-    trust_row = score_df[score_df["aspect"] == "trust"]
-    if not trust_row.empty and int(trust_row.iloc[0]["score"]) < 60:
-        insights.append("Skor trust berada di bawah 60, perlu mitigasi di sisi komunikasi dan kepastian proses.")
-
-    volume = long_df.groupby(long_df["review_date"].dt.date)["review_id_ext"].nunique().sort_index()
-    if len(volume) >= 14:
-        recent = float(volume.tail(7).mean())
-        prev = float(volume.tail(14).head(7).mean())
-        if prev > 0:
-            change = ((recent - prev) / prev) * 100.0
-            direction = "naik" if change >= 0 else "turun"
-            insights.append(f"Volume ulasan 7 hari terakhir {direction} {abs(change):.1f}% dibanding 7 hari sebelumnya.")
-
-    risk_issue = top_issue_for_aspect(long_df, "risk")
-    if risk_issue:
-        insights.append(f"Indikasi isu dominan pada risk: {risk_issue}.")
-
-    return insights[:5]
-
-
-def build_alerts(long_df: pd.DataFrame, score_df: pd.DataFrame) -> list[str]:
-    alerts: list[str] = []
-    if long_df.empty or score_df.empty:
-        return alerts
-
-    risk_row = score_df[score_df["aspect"] == "risk"]
-    trust_row = score_df[score_df["aspect"] == "trust"]
-
-    if not risk_row.empty and int(risk_row.iloc[0]["negative_share"]) >= 35:
-        alerts.append(f"Risk negatif tinggi ({int(risk_row.iloc[0]['negative_share'])}%)")
-    if not trust_row.empty and int(trust_row.iloc[0]["score"]) < 60:
-        alerts.append("Skor trust menurun, perlu respons komunikasi")
-
-    volume = long_df.groupby(long_df["review_date"].dt.date)["review_id_ext"].nunique().sort_index()
-    if len(volume) >= 7:
-        recent = volume.tail(3).mean()
-        baseline = volume.tail(10).head(7).mean() if len(volume) >= 10 else volume.head(max(len(volume) - 3, 1)).mean()
-        if baseline and recent > baseline * 1.3:
-            alerts.append("Lonjakan volume ulasan dibanding minggu sebelumnya")
-
-    if not alerts:
-        alerts.append("Belum ada sinyal kritis. Pantau harian tetap disarankan")
-    return alerts[:4]
-
-
-def score_delta_against_previous(jobs_df: pd.DataFrame, store: DashboardStore, chosen_job: pd.Series) -> dict[str, int]:
-    deltas = {"risk": 0, "trust": 0, "service": 0}
-    chosen_limit = human_limit_label(chosen_job.get("review_limit"))
-    same_scope = jobs_df[
-        (jobs_df["app_name"] == chosen_job["app_name"])
-        & (jobs_df["app_id"] == chosen_job["app_id"])
-        & (jobs_df["model_id"] == chosen_job["model_id"])
-        & (jobs_df["date_from"] == chosen_job["date_from"])
-        & (jobs_df["date_to"] == chosen_job["date_to"])
-        & (jobs_df["review_limit"].map(human_limit_label) == chosen_limit)
-    ].sort_values("fetched_at", ascending=False)
-    if len(same_scope) < 2:
-        return deltas
-
-    prev_job = same_scope.iloc[1]
-    prev_reviews, prev_preds = store.load_job_frames(prev_job["job_id"])
-    cur_reviews, cur_preds = store.load_job_frames(chosen_job["job_id"])
-    prev_scores = aspect_score_table(filter_present_aspects(hydrate_scope(prev_reviews, prev_preds)))
-    cur_scores = aspect_score_table(filter_present_aspects(hydrate_scope(cur_reviews, cur_preds)))
-
-    for aspect in ["risk", "trust", "service"]:
-        current = cur_scores[cur_scores["aspect"] == aspect]
-        previous = prev_scores[prev_scores["aspect"] == aspect]
-        if not current.empty and not previous.empty:
-            deltas[aspect] = int(current.iloc[0]["score"] - previous.iloc[0]["score"])
-    return deltas
 
 
 def benchmark_note(registry_df: pd.DataFrame, model_id: str) -> str:
@@ -1201,23 +1458,61 @@ def health_row_html(label: str, value: int, tone: str) -> str:
     )
 
 
-def aspect_health_card_html(rec: pd.Series, aspect: str, delta: int) -> str:
-    negative_share = int(rec["negative_share"])
-    bars = "".join(
-        [
-            health_row_html("Positif", int(rec["positive_share"]), "positive"),
-            health_row_html("Netral", int(rec["neutral_share"]), "neutral"),
-            health_row_html("Negatif", int(rec["negative_share"]), "negative"),
+def sentiment_tone(label: object, fallback: str = "neutral") -> str:
+    mapping = {
+        "Positive": "positive",
+        "positive": "positive",
+        "Neutral": "neutral",
+        "neutral": "neutral",
+        "Negative": "negative",
+        "negative": "negative",
+    }
+    return mapping.get(str(label), fallback)
+
+
+def sentiment_distribution_bar_html(rec: pd.Series, show_legend: bool = True) -> str:
+    parts = [
+        ("positive", int(rec["positive_share"])),
+        ("neutral", int(rec["neutral_share"])),
+        ("negative", int(rec["negative_share"])),
+    ]
+    segments = "".join(
+        f'<div class="sentiment-segment sentiment-segment-{tone}" style="width:{max(value, 0)}%"></div>'
+        for tone, value in parts
+    )
+    legend = "".join(
+        (
+            f'<div class="sentiment-legend-row">'
+            f'<div class="sentiment-legend-label">{label}</div>'
+            f'<div class="sentiment-legend-value">{value}%</div>'
+            f'</div>'
+        )
+        for label, value in [
+            ("Positif", int(rec["positive_share"])),
+            ("Netral", int(rec["neutral_share"])),
+            ("Negatif", int(rec["negative_share"])),
         ]
     )
+    if not show_legend:
+        return f'<div class="sentiment-stack">{segments}</div>'
+    return f'<div class="sentiment-stack">{segments}</div><div class="sentiment-legend">{legend}</div>'
+
+
+def aspect_health_card_html(rec: pd.Series, aspect: str) -> str:
+    dominant_badge = pill_html(
+        f"{rec['dominant_sentiment']} {int(rec['dominant_share'])}%",
+        sentiment_tone(rec["dominant_sentiment"]),
+    )
+    bars = sentiment_distribution_bar_html(rec)
     return (
         f'<div class="health-card">'
         f'<div class="health-head">'
-        f'<div><div class="health-name">{html.escape(str(rec["aspect"]).title())}</div><div class="health-score">{int(rec["score"])}</div></div>'
-        f'<div class="health-meta">{pill_html(rec["status"], aspect)} {pill_html(f"delta {delta:+d}", aspect)}</div>'
+        f'<div><div class="health-name">{html.escape(str(rec["aspect"]).title())}</div>'
+        f'<div class="health-balance">{html.escape(str(rec["balance_note"]))}</div></div>'
+        f'<div class="health-meta">{dominant_badge}</div>'
         f'</div>'
         f'<div class="health-bars">{bars}</div>'
-        f'<div class="health-footer">{pill_html(f"Negatif {negative_share}%", aspect)}</div>'
+        f'<div class="health-footer">{pill_html("Distribusi sentimen per aspek", "neutral")}</div>'
         f'</div>'
     )
 
@@ -1231,33 +1526,68 @@ def summary_card_html(label: str, value: str) -> str:
     )
 
 
-def quick_insights_html(items: list[str]) -> str:
-    rows = "".join(f'<div class="insight-item">{html.escape(item)}</div>' for item in items)
-    return f'<div class="insight-list">{rows}</div>'
+def diagnosis_implication_text(item: pd.Series, aspect: str) -> str:
+    issue = str(item.get("issue", "")).strip().lower()
+    if issue.startswith("campuran"):
+        if aspect == "service":
+            return "Keluhan pada Service belum terkonsentrasi pada satu isu utama."
+        if aspect == "trust":
+            return "Keluhan pada Trust masih tersebar di beberapa isu."
+        return "Keluhan pada aspek ini masih tersebar di beberapa isu."
+
+    issue_label = re.sub(r"\s*\(\d+%\)\s*$", "", str(item.get("issue", "")).strip())
+    if issue_label:
+        return f"Keluhan paling banyak terkait {issue_label.lower()}."
+    return "Aspek ini masih perlu dibaca hati-hati."
 
 
-def diagnosis_card_html(item: pd.Series, aspect: str) -> str:
+def diagnosis_distribution_html(value: object) -> str:
+    text = str(value or "").strip()
+    if not text or text == "-":
+        return '<div class="diagnosis-row-value">-</div>'
+
+    parts = [part.strip() for part in text.splitlines() if part.strip()]
+    if len(parts) <= 1:
+        return f'<div class="diagnosis-row-value diagnosis-row-value-text">{html.escape(text)}</div>'
+
+    rendered_lines: list[str] = []
+    for part in parts:
+        lower = part.lower()
+        tone_class = ""
+        if lower.startswith("negatif:"):
+            tone_class = " diagnosis-dist-line-negative"
+        elif lower.startswith("positif:"):
+            tone_class = " diagnosis-dist-line-positive"
+        rendered_lines.append(
+            f'<div class="diagnosis-dist-line{tone_class}">{html.escape(part)}</div>'
+        )
+    lines = "".join(rendered_lines)
+    return f'<div class="diagnosis-distribution">{lines}</div>'
+
+
+def diagnosis_summary_html(item: pd.Series, aspect: str) -> str:
+    rows_html = (
+        f'<div class="diagnosis-row">'
+        f'<div class="diagnosis-row-label">Fokus isu</div>'
+        f'<div class="diagnosis-row-value diagnosis-row-value-text">{html.escape(str(item.get("issue", "-")))}</div>'
+        f'</div>'
+        f'<div class="diagnosis-row">'
+        f'<div class="diagnosis-row-label">Arah tren</div>'
+        f'<div class="diagnosis-row-value diagnosis-row-value-text">{html.escape(str(item.get("trend", "-")))}</div>'
+        f'</div>'
+        f'<div class="diagnosis-row">'
+        f'<div class="diagnosis-row-label">Distribusi sinyal</div>'
+        f'{diagnosis_distribution_html(item.get("worst_app", "-"))}'
+        f'</div>'
+    )
     return f"""
-    <div class="insight-card">
-        <div class="eyebrow-mini">Aspect diagnosis</div>
+    <div class="diagnosis-summary">
+        <div class="eyebrow-mini">So what</div>
         <div class="card-title">{html.escape(str(item['title']))}</div>
-        <div class="metric-line">
-            <span class="metric-label">Skor</span><br/>
-            {pill_html(item['score'], aspect)} {pill_html(item['status'], 'neutral')} {pill_html(f"delta {item['delta']:+d}", aspect)}
+        <div class="diagnosis-lead">{html.escape(diagnosis_implication_text(item, aspect))}</div>
+        <div class="diagnosis-rows">
+            {rows_html}
         </div>
-        <div class="metric-line">
-            <span class="metric-label">Sentimen</span><br/>
-            {pill_html(f"Negatif {item['negative_share']}%", aspect)} {pill_html(f"Positif {item['positive_share']}%", 'neutral')}
-        </div>
-        <div class="metric-line">
-            <span class="metric-label">Isu utama</span><br/>
-            {pill_html(item['issue'], aspect)}
-        </div>
-        <div class="metric-line">
-            <span class="metric-label">App terdampak</span><br/>
-            {pill_html(item['worst_app'], 'neutral')}
-        </div>
-        <div class="trust-note">{html.escape(str(item['trend']))}</div>
     </div>
     """
 
@@ -1314,9 +1644,9 @@ def aspect_trend_signal(long_df: pd.DataFrame, aspect: str) -> str:
     prev = daily.tail(6).head(3)["neg_share"].mean()
     delta = (recent - prev) * 100.0
     if delta >= 5:
-        return f"Naik {delta:.1f} pts vs 3 hari."
+        return "Cenderung naik dibanding 3 hari sebelumnya."
     if delta <= -5:
-        return f"Turun {abs(delta):.1f} pts vs 3 hari."
+        return "Cenderung turun dibanding 3 hari sebelumnya."
     return "Relatif stabil vs 3 hari."
 
 
@@ -1326,15 +1656,48 @@ def worst_app_for_aspect(long_df: pd.DataFrame, aspect: str) -> str:
         return "-"
 
     app_scores = (
-        subset.assign(is_negative=subset["pred_label"].eq("Negative").astype(int))
+        subset.assign(
+            is_negative=subset["pred_label"].eq("Negative").astype(int),
+            is_positive=subset["pred_label"].eq("Positive").astype(int),
+        )
         .groupby("app_name", as_index=False)
-        .agg(negative_share=("is_negative", "mean"), volume=("review_id_ext", "nunique"))
+        .agg(
+            negative_share=("is_negative", "mean"),
+            positive_share=("is_positive", "mean"),
+            volume=("review_id_ext", "nunique"),
+        )
     )
     if app_scores.empty:
         return "-"
-    app_scores = app_scores.sort_values(["negative_share", "volume"], ascending=[False, False])
-    top = app_scores.iloc[0]
-    return f"{top['app_name']} • {top['negative_share'] * 100:.0f}% negatif"
+    app_scores["negative_pct"] = (app_scores["negative_share"] * 100).round(0).astype(int)
+    app_scores["positive_pct"] = (app_scores["positive_share"] * 100).round(0).astype(int)
+
+    if len(app_scores) == 1:
+        row = app_scores.iloc[0]
+        return (
+            f"Negatif: {row['app_name']} {int(row['negative_pct'])}%\n"
+            f"Positif: {row['app_name']} {int(row['positive_pct'])}%"
+        )
+
+    preferred_order = ["Kredivo", "Akulaku"]
+    ordered_rows: list[pd.Series] = []
+    for app_name in preferred_order:
+        match = app_scores[app_scores["app_name"].astype(str) == app_name]
+        if not match.empty:
+            ordered_rows.append(match.iloc[0])
+    for _, row in app_scores.iterrows():
+        if str(row["app_name"]) not in preferred_order:
+            ordered_rows.append(row)
+
+    negative_line = "Negatif: " + " | ".join(
+        f"{row['app_name']} {int(row['negative_pct'])}%"
+        for row in ordered_rows
+    )
+    positive_line = "Positif: " + " | ".join(
+        f"{row['app_name']} {int(row['positive_pct'])}%"
+        for row in ordered_rows
+    )
+    return f"{negative_line}\n{positive_line}"
 
 
 def top_issue_for_aspect(long_df: pd.DataFrame, aspect: str) -> str:
@@ -1354,7 +1717,6 @@ def top_issue_for_aspect(long_df: pd.DataFrame, aspect: str) -> str:
 def aspect_diagnosis_table(
     long_df: pd.DataFrame,
     score_df: pd.DataFrame,
-    delta_map: dict[str, int],
 ) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     for aspect in ["risk", "trust", "service"]:
@@ -1362,21 +1724,397 @@ def aspect_diagnosis_table(
         if row.empty:
             continue
         rec = row.iloc[0]
+        aspect_volume = int(
+            long_df.loc[long_df["aspect"] == aspect, "review_id_ext"].nunique()
+        ) if not long_df.empty else 0
         rows.append(
             {
                 "aspect": aspect,
-                "title": {"risk": "Risk", "trust": "Trust", "service": "Service"}[aspect],
-                "score": int(rec["score"]),
-                "status": rec["status"],
+                "title": ASPECT_LABEL_MAP[aspect],
+                "dominant_sentiment": rec["dominant_sentiment"],
+                "dominant_share": int(rec["dominant_share"]),
                 "negative_share": int(rec["negative_share"]),
                 "positive_share": int(rec["positive_share"]),
-                "delta": int(delta_map.get(aspect, 0)),
+                "neutral_share": int(rec["neutral_share"]),
+                "balance_note": rec["balance_note"],
+                "volume": aspect_volume,
                 "issue": top_issue_for_aspect(long_df, aspect),
                 "worst_app": worst_app_for_aspect(long_df, aspect),
                 "trend": aspect_trend_signal(long_df, aspect),
             }
         )
     return pd.DataFrame(rows)
+
+
+def diagnosis_examples_frame(
+    long_df: pd.DataFrame,
+    aspect: str,
+    sentiment: str,
+    limit: int,
+) -> pd.DataFrame:
+    if long_df.empty:
+        return pd.DataFrame()
+
+    frame = long_df[
+        (long_df["aspect"] == aspect) & (long_df["pred_label"] == sentiment)
+    ].copy()
+    if frame.empty:
+        return frame
+
+    frame["confidence"] = pd.to_numeric(frame["confidence"], errors="coerce").fillna(0.0)
+    frame["review_date"] = pd.to_datetime(frame["review_date"], errors="coerce")
+    frame["review_text_raw"] = frame["review_text_raw"].fillna("").astype(str)
+    frame["review_text_clean"] = frame["review_text_clean"].fillna(frame["review_text_raw"]).astype(str)
+    frame["text_len"] = frame["review_text_raw"].str.len()
+    frame = frame[frame["review_text_raw"].str.strip().str.len() > 0].copy()
+    if frame.empty:
+        return frame
+
+    frame["sample_score"] = (
+        frame["confidence"] * 3.0
+        + frame["text_len"].clip(lower=40, upper=240) / 240.0
+        + frame.get("aspect_presence_hits", 0)
+    )
+    ranked = frame.sort_values(
+        ["sample_score", "confidence", "review_date", "text_len"],
+        ascending=[False, False, False, False],
+        na_position="last",
+    )
+    ranked = ranked.drop_duplicates(subset=["review_id_ext"], keep="first")
+    return ranked.head(limit).reset_index(drop=True)
+
+
+def diagnosis_example_html(row: pd.Series, sentiment: str) -> str:
+    date_value = pd.to_datetime(row.get("review_date"), errors="coerce")
+    date_text = str(date_value.date()) if pd.notna(date_value) else "-"
+    meta = " • ".join(
+        [
+            html.escape(str(row.get("app_name", "-"))),
+            html.escape(date_text),
+            f"conf {float(row.get('confidence', 0.0)):.2f}",
+        ]
+    )
+    return f"""
+    <div class="example-card example-card-{sentiment_tone(sentiment)}">
+        <div class="example-meta">
+            {meta}<br/>{pill_html(sentiment, sentiment_tone(sentiment))}
+        </div>
+        <div class="example-quote">"{html.escape(trim_text(str(row.get("review_text_raw", "")), max_chars=240))}"</div>
+    </div>
+    """
+
+
+def render_example_native_card(row: pd.Series, sentiment: str) -> None:
+    date_value = pd.to_datetime(row.get("review_date"), errors="coerce")
+    date_text = str(date_value.date()) if pd.notna(date_value) else "-"
+    meta = " | ".join(
+        [
+            str(row.get("app_name", "-")),
+            date_text,
+            f"conf {float(row.get('confidence', 0.0)):.2f}",
+        ]
+    )
+    st.markdown(
+        f'<div class="example-native-card example-native-card-{sentiment_tone(sentiment)}">'
+        f'<div class="example-native-meta">{html.escape(meta)}</div>'
+        f'<div class="example-native-text">{html.escape(trim_text(str(row.get("review_text_raw", "")), max_chars=220))}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_diagnosis_examples(long_df: pd.DataFrame, aspect: str) -> None:
+    example_plan = [("Positive", 4), ("Neutral", 2), ("Negative", 4)]
+    for idx, (sentiment, limit) in enumerate(example_plan):
+        if idx > 0:
+            st.markdown('<div class="section-spacer-md"></div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="example-section-title">{html.escape(sentiment)} ({limit})</div>',
+            unsafe_allow_html=True,
+        )
+        sample_df = diagnosis_examples_frame(long_df, aspect, sentiment, limit)
+        if sample_df.empty:
+            st.info(f"Belum ada contoh {sentiment.lower()} untuk aspek ini.")
+            continue
+        st.markdown(
+            f'<div class="example-section-note">Menampilkan {len(sample_df)} contoh review yang paling representatif untuk sentimen ini.</div>',
+            unsafe_allow_html=True,
+        )
+        for _, row in sample_df.iterrows():
+            render_example_native_card(row, sentiment)
+        if len(sample_df) < limit:
+            st.caption(
+                f"Contoh yang tersedia saat ini {len(sample_df)} dari target {limit}."
+            )
+
+
+def conclusion_card_html(title: str, body: str, tone: str, variant: str = "default") -> str:
+    return (
+        f'<div class="conclusion-card conclusion-card-{tone} conclusion-card-{variant}">'
+        f'<div class="conclusion-title">{html.escape(title)}</div>'
+        f'<div class="conclusion-copy">{html.escape(body)}</div>'
+        f'</div>'
+    )
+
+
+def split_summary_sentences(text: object, limit: int = 2) -> list[str]:
+    cleaned = re.sub(r"\s+", " ", str(text or "")).strip()
+    if not cleaned:
+        return []
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip()]
+    if not sentences:
+        return [cleaned]
+    return sentences[:limit]
+
+
+def summary_metric_chips(metrics: dict[str, object] | None) -> list[str]:
+    if not isinstance(metrics, dict):
+        return []
+
+    sentiment_map = {
+        "Positive": "Positif",
+        "Neutral": "Netral",
+        "Negative": "Negatif",
+    }
+    chips: list[str] = []
+    dominant = metrics.get("dominant_sentiment")
+    dominant_share = metrics.get("dominant_share")
+    if dominant is not None and dominant_share is not None:
+        try:
+            chips.append(f"Dominan: {sentiment_map.get(str(dominant), str(dominant))} {float(dominant_share):.1f}%")
+        except (TypeError, ValueError):
+            chips.append(f"Dominan: {sentiment_map.get(str(dominant), str(dominant))}")
+
+    best_aspect = metrics.get("best_aspect")
+    if best_aspect:
+        chips.append(f"Kuat: {ASPECT_LABEL_MAP.get(str(best_aspect), str(best_aspect).title())}")
+
+    worst_aspect = metrics.get("worst_aspect")
+    if worst_aspect:
+        chips.append(f"Rawan: {ASPECT_LABEL_MAP.get(str(worst_aspect), str(worst_aspect).title())}")
+
+    issue = metrics.get("issue")
+    if issue:
+        chips.append(f"Isu: {trim_text(str(issue), max_chars=42)}")
+
+    trend = metrics.get("trend")
+    if trend:
+        chips.append(trim_text(str(trend), max_chars=44))
+
+    negative_share = metrics.get("negative_share")
+    if negative_share is not None and "aspect" in metrics:
+        try:
+            chips.append(f"Negatif: {float(negative_share):.1f}%")
+        except (TypeError, ValueError):
+            pass
+
+    app_name = metrics.get("app_name")
+    if app_name:
+        chips.append(f"App: {app_name}")
+
+    seen: set[str] = set()
+    out: list[str] = []
+    for chip in chips:
+        text = re.sub(r"\s+", " ", str(chip)).strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out[:4]
+
+
+def render_compact_summary_card(card: object, default_title: str, default_tone: str, variant: str = "default") -> str:
+    if isinstance(card, str) and card.strip():
+        return card
+
+    if not isinstance(card, dict):
+        return conclusion_card_html(default_title, "Belum ada data yang cukup untuk membentuk kesimpulan.", default_tone, variant)
+
+    title = str(card.get("title", default_title))
+    tone = sentiment_tone(card.get("tone", default_tone), default_tone)
+    body = str(card.get("body", card.get("text", ""))).strip()
+    sentences = split_summary_sentences(body, limit=2)
+    lead = sentences[0] if sentences else "Belum ada data yang cukup untuk membentuk kesimpulan."
+    subline = sentences[1] if len(sentences) > 1 else ""
+
+    evidence_items: list[str] = summary_metric_chips(card.get("metrics"))
+
+    seen: set[str] = set()
+    compact_evidence: list[str] = []
+    for item in evidence_items:
+        text = re.sub(r"\s+", " ", str(item)).strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        compact_evidence.append(text)
+    compact_evidence = compact_evidence[:3]
+
+    evidence_html = ""
+    if compact_evidence:
+        chips_html = "".join(f'<span class="conclusion-chip">{html.escape(item)}</span>' for item in compact_evidence)
+        evidence_html = f'<div class="conclusion-evidence-row">{chips_html}</div>'
+
+    subline_html = f'<div class="conclusion-subline">{html.escape(subline)}</div>' if subline else ""
+    return (
+        f'<div class="conclusion-card conclusion-card-{tone} conclusion-card-{variant}">'
+        f'<div class="conclusion-title">{html.escape(title)}</div>'
+        f'<div class="conclusion-lead">{html.escape(lead)}</div>'
+        f'{subline_html}'
+        f'{evidence_html}'
+        f'</div>'
+    )
+
+
+def normalize_summary_conclusion_payload(payload: object) -> dict[str, object] | None:
+    if not isinstance(payload, dict):
+        return None
+
+    def coerce_card(value: object, default_title: str, default_tone: str, variant: str = "default") -> str:
+        if isinstance(value, str) and value.strip():
+            return value
+        if isinstance(value, dict):
+            return render_compact_summary_card(value, default_title, default_tone, variant)
+        return conclusion_card_html(default_title, "Belum ada data yang cukup untuk membentuk kesimpulan.", default_tone, variant)
+
+    overall = payload.get("overall") or payload.get("overview") or payload.get("gambaran")
+    signal = payload.get("signal") or payload.get("focus") or payload.get("action") or payload.get("insight")
+    meaning = payload.get("meaning") or payload.get("final_meaning") or payload.get("closing")
+    apps = payload.get("apps") or payload.get("app_cards") or payload.get("per_app") or []
+
+    if overall is None or signal is None:
+        return None
+
+    normalized_apps: list[str] = []
+    if isinstance(apps, list):
+        for idx, item in enumerate(apps):
+            default_title = "Kredivo" if idx == 0 else "Akulaku" if idx == 1 else f"App {idx + 1}"
+            normalized_apps.append(coerce_card(item, default_title, "neutral", "app"))
+
+    return {
+        "overall": coerce_card(overall, "Gambaran Pengalaman", "neutral", "lead"),
+        "signal": coerce_card(signal, "Sinyal yang Perlu Diperhatikan", "neutral", "focus"),
+        "meaning": coerce_card(meaning, "Makna Akhir", "neutral", "close") if meaning is not None else "",
+        "apps": normalized_apps,
+    }
+
+
+def build_summary_conclusion_payload(long_df: pd.DataFrame, score_df: pd.DataFrame) -> dict[str, object]:
+    if dashboard_summary_payload is not None:
+        try:
+            payload = dashboard_summary_payload(long_df=long_df, score_df=score_df)
+        except TypeError:
+            payload = dashboard_summary_payload(long_df, score_df)
+        normalized = normalize_summary_conclusion_payload(payload)
+        if normalized is not None:
+            return normalized
+    fallback_payload = executive_conclusion_payload(long_df, score_df)
+    return normalize_summary_conclusion_payload(fallback_payload) or fallback_payload
+
+
+def app_conclusion_card(long_df: pd.DataFrame, app_name: str) -> str:
+    app_df = long_df[long_df["app_name"] == app_name].copy()
+    if app_df.empty:
+        return conclusion_card_html(
+            app_name,
+            "Belum ada data cukup untuk membentuk ringkasan app ini.",
+            "neutral",
+            "app",
+        )
+
+    score_df = aspect_score_table(app_df)
+    if score_df.empty:
+        return conclusion_card_html(
+            app_name,
+            "Distribusi sentimen app ini belum cukup lengkap.",
+            "neutral",
+            "app",
+        )
+
+    dominant = app_df["pred_label"].value_counts(normalize=True).mul(100).round(1).to_dict()
+    dominant_label = max(dominant, key=dominant.get)
+    negative_row = score_df.sort_values(["negative_share", "positive_share"], ascending=[False, False]).iloc[0]
+    positive_row = score_df.sort_values(["positive_share", "neutral_share"], ascending=[False, False]).iloc[0]
+
+    body = (
+        f"Iklim sentimen di {app_name} saat ini didominasi {dominant_label.lower()} "
+        f"({dominant.get(dominant_label, 0):.1f}%). Tekanan negatif paling kuat muncul pada aspek "
+        f"{ASPECT_LABEL_MAP[str(negative_row['aspect'])]} ({int(negative_row['negative_share'])}%), "
+        f"sementara kekuatan terbaik terlihat pada aspek {ASPECT_LABEL_MAP[str(positive_row['aspect'])]} "
+        f"({int(positive_row['positive_share'])}%)."
+    )
+    return conclusion_card_html(app_name, body, sentiment_tone(dominant_label), "app")
+
+
+def executive_conclusion_payload(
+    long_df: pd.DataFrame,
+    score_df: pd.DataFrame,
+) -> dict[str, object]:
+    if long_df.empty or score_df.empty:
+        return {
+            "overall": conclusion_card_html(
+                "Ringkasan Umum",
+                "Belum ada data yang cukup untuk membentuk kesimpulan.",
+                "neutral",
+                "lead",
+            ),
+            "focus": "",
+            "apps": [],
+        }
+
+    total_sentiment = (
+        long_df["pred_label"].value_counts(normalize=True).mul(100).round(1).to_dict()
+    )
+    dominant_sentiment = max(total_sentiment, key=total_sentiment.get)
+
+    positive_row = score_df.sort_values(
+        ["positive_share", "neutral_share"], ascending=[False, False]
+    ).iloc[0]
+    negative_row = score_df.sort_values(
+        ["negative_share", "positive_share"], ascending=[False, False]
+    ).iloc[0]
+    positive_aspect = str(positive_row["aspect"])
+    negative_aspect = str(negative_row["aspect"])
+
+    overall = conclusion_card_html(
+        "Gambaran Pengalaman",
+        (
+            f"Secara keseluruhan, pengalaman pakai masih didominasi {dominant_sentiment.lower()}. "
+            f"Hal yang paling sering muncul sebagai nilai positif ada di aspek {ASPECT_LABEL_MAP[positive_aspect]}, "
+            f"sementara tekanan paling kuat ada di aspek {ASPECT_LABEL_MAP[negative_aspect]}."
+        ),
+        sentiment_tone(dominant_sentiment),
+        "lead",
+    )
+    signal = conclusion_card_html(
+        "Sinyal yang Perlu Diperhatikan",
+        (
+            f"Perhatian utama ada pada aspek {ASPECT_LABEL_MAP[negative_aspect]} karena area ini paling sering memicu keluhan. "
+            f"Di sisi lain, kekuatan pada aspek {ASPECT_LABEL_MAP[positive_aspect]} tetap perlu dijaga."
+        ),
+        "negative",
+        "focus",
+    )
+    meaning = conclusion_card_html(
+        "Makna Akhir",
+        (
+            f"Kalau pola ini terus berulang, pengalaman pakai bisa terasa kurang stabil walaupun masih ada sisi yang membantu. "
+            f"Artinya, area {ASPECT_LABEL_MAP[negative_aspect]} perlu dibenahi sambil menjaga kekuatan di {ASPECT_LABEL_MAP[positive_aspect]}."
+        ),
+        "neutral",
+        "close",
+    )
+    app_cards: list[str] = []
+    raw_app_names = [str(name) for name in long_df["app_name"].dropna().astype(str).unique().tolist()]
+    ordered_app_names = [name for name in ["Kredivo", "Akulaku"] if name in raw_app_names]
+    ordered_app_names.extend(sorted(name for name in raw_app_names if name not in ordered_app_names))
+    for app_name in ordered_app_names:
+        app_cards.append(app_conclusion_card(long_df, app_name))
+    return {
+        "overall": overall,
+        "signal": signal,
+        "meaning": meaning,
+        "apps": app_cards,
+    }
 
 
 def review_card_payload(row: pd.Series, title: str, rationale: str) -> dict[str, str]:
@@ -1405,7 +2143,7 @@ def review_card_payload(row: pd.Series, title: str, rationale: str) -> dict[str,
 
 
 def evidence_card_html(card: dict[str, str], aspect: str) -> str:
-    issue_tone = aspect if card.get("sentiment") == "Negative" else "neutral"
+    issue_tone = sentiment_tone(card.get("sentiment"))
     return f"""
     <div class="evidence-card evidence-card-{html.escape(aspect)}">
         <div class="eyebrow-mini">Review evidence</div>
@@ -1774,9 +2512,9 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
         """
         <div class="hero">
             <div class="eyebrow">Page 1 - Executive ABSA View</div>
-            <h2 style="margin:0.2rem 0 0.3rem 0;">Pahami kondisi setiap aspek, masalah utama, dan bukti reviewnya</h2>
+            <h2 style="margin:0.2rem 0 0.3rem 0;">Pahami kondisi setiap aspek, masalah utama, dan kesimpulan sentimennya</h2>
             <div class="section-intro">
-                Halaman ini sengaja non-teknis: fokus pada health per aspek, diagnosis singkat, trend, dan evidence yang bisa dibaca cepat.
+                Halaman ini sengaja non-teknis: fokus pada distribusi sentimen, diagnosis singkat, trend, dan ringkasan akhir yang cepat dibaca.
             </div>
         </div>
         """,
@@ -1849,13 +2587,22 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
                 key="fetch_mode",
             )
             use_limit = fetch_mode == "Dengan limit (lebih cepat)"
+            fetch_scope = st.radio(
+                "Cakupan aplikasi",
+                ["Combined", "Kredivo", "Akulaku"],
+                horizontal=True,
+                key="fetch_scope",
+            )
 
         with col3:
             if use_limit:
                 st.info("Mode limit aktif")
             else:
                 st.success("Mode representatif aktif: tanpa limit")
-            st.caption("Cakupan fetch selalu Both. Filter aplikasi dilakukan di scope bar pada halaman utama.")
+            if fetch_scope == "Combined":
+                st.caption("Fetch akan menarik dua aplikasi sekaligus: Kredivo dan Akulaku.")
+            else:
+                st.caption(f"Fetch akan menarik khusus {fetch_scope}.")
 
         settings_left, settings_right = st.columns([2.2, 1])
         with settings_left:
@@ -1882,7 +2629,12 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
                 st.error("Rentang tanggal tidak valid. Tanggal awal harus <= tanggal akhir.")
                 return
 
-            app_specs = [("Kredivo", APPS["Kredivo"]), ("Akulaku", APPS["Akulaku"])]
+            if fetch_scope == "Combined":
+                app_specs = [("Kredivo", APPS["Kredivo"]), ("Akulaku", APPS["Akulaku"])]
+            elif fetch_scope == "Kredivo":
+                app_specs = [("Kredivo", APPS["Kredivo"])]
+            else:
+                app_specs = [("Akulaku", APPS["Akulaku"])]
 
             status = st.empty()
             progress = st.progress(0)
@@ -2050,8 +2802,7 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
 
     kpis = compute_kpis(long_df, wide_df)
     score_df = aspect_score_table(long_df)
-    delta_map = score_delta_against_previous(jobs_df, store, chosen_job)
-    diagnosis_df = aspect_diagnosis_table(long_df, score_df, delta_map)
+    diagnosis_df = aspect_diagnosis_table(long_df, score_df)
     period_start = pd.to_datetime(wide_df["review_date"], errors="coerce").min()
     period_end = pd.to_datetime(wide_df["review_date"], errors="coerce").max()
     duration_days = 0
@@ -2066,19 +2817,18 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
                 f"({duration_days} hari, {kpis['total_reviews']:,} ulasan unik)."
             )
         else:
-            st.caption("Ringkasan cepat kondisi sentimen saat ini.")
+            st.caption("Ringkasan cepat distribusi sentimen saat ini.")
         health_cards: list[str] = []
-        names = {"risk": "Risk", "trust": "Trust", "service": "Service"}
         for aspect in ["risk", "trust", "service"]:
             row = score_df[score_df["aspect"] == aspect]
             if row.empty:
                 health_cards.append(
-                    f'<div class="health-card"><div class="health-name">{names[aspect]}</div><div class="trust-note">Belum ada data.</div></div>'
+                    f'<div class="health-card"><div class="health-name">{ASPECT_LABEL_MAP[aspect]}</div><div class="trust-note">Belum ada data.</div></div>'
                 )
                 continue
             rec = row.iloc[0].copy()
-            rec["aspect"] = names[aspect]
-            health_cards.append(aspect_health_card_html(rec, aspect, delta_map.get(aspect, 0)))
+            rec["aspect"] = ASPECT_LABEL_MAP[aspect]
+            health_cards.append(aspect_health_card_html(rec, aspect))
         st.markdown(f'<div class="health-grid">{"".join(health_cards)}</div>', unsafe_allow_html=True)
 
         summary_html = "".join(
@@ -2092,24 +2842,41 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
 
     with st.container(border=True):
         st.markdown("### Diagnosis Singkat")
-        st.caption("Ringkasan cepat per aspek: kondisi, isu utama, app terdampak, dan arah trend. Hanya memakai review dengan bukti aspek yang cukup.")
+        st.caption("Lihat ringkasan per aspek di atas, lalu buka detail jika perlu melihat contoh review.")
+        st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
         d1, d2, d3 = st.columns(3)
-        for col, aspect in zip([d1, d2, d3], ["risk", "trust", "service"]):
+        aspects = ["risk", "trust", "service"]
+        for col, aspect in zip([d1, d2, d3], aspects):
+            with col:
+                rec = diagnosis_df[diagnosis_df["aspect"] == aspect]
+                if rec.empty:
+                    st.info(f"Belum ada diagnosis untuk {ASPECT_LABEL_MAP[aspect]}.")
+                    continue
+                item = rec.iloc[0]
+                st.markdown(diagnosis_summary_html(item, aspect), unsafe_allow_html=True)
+        st.markdown('<div class="diagnosis-detail-stack"></div>', unsafe_allow_html=True)
+        for aspect in aspects:
             rec = diagnosis_df[diagnosis_df["aspect"] == aspect]
             if rec.empty:
-                col.info("Belum ada diagnosis.")
                 continue
             item = rec.iloc[0]
-            col.markdown(diagnosis_card_html(item, aspect), unsafe_allow_html=True)
+            with st.expander(f"Detail {item['title']}", expanded=False):
+                st.caption(
+                    f"Dominan: {item['dominant_sentiment']} ({int(item['dominant_share'])}%) | "
+                    f"Volume aspek: {int(item['volume']):,} | "
+                    f"Isu utama: {item['issue']}."
+                )
+                render_diagnosis_examples(long_df, aspect)
 
     with st.container(border=True):
         st.markdown("### Issue Map per Aspek")
         st.caption("Layer bantu baca review negatif. Ini interpretasi rule-based dengan aspect presence filtering, bukan label gold baru.")
+        st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
         i1, i2, i3 = st.columns(3)
         for col, aspect in zip([i1, i2, i3], ["risk", "trust", "service"]):
             full_issue_df = issue_breakdown(long_df, aspect)
             issue_df = full_issue_df.head(3)
-            title = {"risk": "Risk", "trust": "Trust", "service": "Service"}[aspect]
+            title = ASPECT_LABEL_MAP[aspect]
             with col:
                 if issue_df.empty:
                     st.info("Belum ada pola isu.")
@@ -2118,11 +2885,6 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
                     issue_map_card_html(title, issue_df, issue_specific_coverage(full_issue_df), aspect),
                     unsafe_allow_html=True,
                 )
-
-    with st.container(border=True):
-        st.markdown("### Quick Insights")
-        st.caption("Rule-based summary untuk pembacaan cepat, memakai review yang cukup eksplisit per aspek.")
-        st.markdown(quick_insights_html(rule_based_insights(long_df, score_df, wide_df)), unsafe_allow_html=True)
 
     with st.container(border=True):
         st.markdown("### Trend Utama")
@@ -2143,11 +2905,7 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
                 y="share",
                 color="pred_label",
                 category_orders={"pred_label": ["Negative", "Neutral", "Positive"]},
-                color_discrete_map={
-                    "Negative": "#b44e34",
-                    "Neutral": "#8c8f95",
-                    "Positive": "#2f7f52",
-                },
+                color_discrete_map=SENTIMENT_COLOR_MAP,
                 title="Komposisi sentimen harian (%)",
             )
             fig_mix.update_yaxes(range=[0, 100], ticksuffix="%")
@@ -2156,24 +2914,38 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
             st.info("Belum ada data trend harian.")
 
     with st.container(border=True):
-        st.markdown("### Evidence by Aspect")
-        st.caption("Setiap aspek menampilkan tiga bukti yang dipilih dengan score sederhana: aspek hadir, issue cukup spesifik, confidence memadai, dan review tidak terlalu generik.")
-        risk_tab, trust_tab, service_tab = st.tabs(["Risk", "Trust", "Service"])
-        for tab, aspect in zip([risk_tab, trust_tab, service_tab], ["risk", "trust", "service"]):
-            with tab:
-                cards = representative_evidence_cards(long_df, aspect)
-                if not cards:
-                    st.info("Belum ada review representatif untuk aspek ini.")
-                else:
-                    c1, c2, c3 = st.columns(3)
-                    for col, card in zip([c1, c2, c3], cards):
-                        with col:
-                            st.markdown(evidence_card_html(card, aspect), unsafe_allow_html=True)
+        st.markdown("### Summary Kesimpulan")
+        st.caption("Ringkasan akhir yang menyatukan pengalaman pakai, area yang perlu dijaga, dan perbedaan antar app.")
+        st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
+        conclusion_payload = build_summary_conclusion_payload(long_df, score_df)
+        st.markdown(str(conclusion_payload["overall"]), unsafe_allow_html=True)
+        app_cards = conclusion_payload.get("apps", [])
+        if len(app_cards) >= 2:
+            st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
+            col_left, col_right = st.columns(2, gap="medium")
+            with col_left:
+                st.markdown(str(app_cards[0]), unsafe_allow_html=True)
+            with col_right:
+                st.markdown(str(app_cards[1]), unsafe_allow_html=True)
+        elif len(app_cards) == 1:
+            st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
+            st.markdown(str(app_cards[0]), unsafe_allow_html=True)
+        signal_html = conclusion_payload.get("signal")
+        meaning_html = conclusion_payload.get("meaning")
+        if signal_html or meaning_html:
+            st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
+            if signal_html and meaning_html:
+                col_left, col_right = st.columns(2, gap="medium")
+                with col_left:
+                    st.markdown(str(signal_html), unsafe_allow_html=True)
+                with col_right:
+                    st.markdown(str(meaning_html), unsafe_allow_html=True)
+            elif signal_html:
+                st.markdown(str(signal_html), unsafe_allow_html=True)
+            elif meaning_html:
+                st.markdown(str(meaning_html), unsafe_allow_html=True)
 
-        alert_text = " | ".join(build_alerts(long_df, score_df))
-        st.caption(f"Sinyal cepat: {alert_text}")
-
-    st.caption("Page 1 sengaja fokus ke insight non-teknis: kondisi per aspek, masalah dominan, trend, dan evidence review.")
+    st.caption("Page 1 sekarang fokus ke distribusi sentimen per aspek, diagnosis yang bisa dibuka-tutup, trend utama, dan kesimpulan ringkas di bagian akhir.")
 
 
 def safe_read_csv(path: Path) -> pd.DataFrame:

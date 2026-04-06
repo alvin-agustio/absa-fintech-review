@@ -1,0 +1,5 @@
+Family,LLM-Labelled Validation F1 Macro,LLM-Labelled Validation F1 Weighted,LLM-Labelled Validation Accuracy,LLM-Labelled + Human Subset Validation F1 Macro,LLM-Labelled + Human Subset Validation F1 Weighted,LLM-Labelled + Human Subset Validation Accuracy,Training Time (s),Trainable %
+Baseline,0.7866,0.9521,0.9522,0.7946,0.933,0.9323,916.2,-
+LoRA,0.7895,0.9553,0.9567,0.8174,0.9479,0.9522,550.81,0.47
+Retrained,0.8724,0.975,0.9753,0.8097,0.9398,0.9442,907.52,-
+Retrained LoRA,0.8787,0.978,0.9784,0.7076,0.9292,0.9402,539.55,0.47

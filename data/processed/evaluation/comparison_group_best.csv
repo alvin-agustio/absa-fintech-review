@@ -1,0 +1,2 @@
+model_name,experiment_family,training_regime,uncertainty_enabled,uncertainty_variant,comparison_group,accuracy,f1_macro,f1_weighted,training_time_seconds,trainable_params,trainable_pct,uncertainty_source_model_id
+baseline,baseline,full_finetune,False,without_uncertainty,baseline,0.9790240191283556,0.8766317231404361,0.9784413071155073,,,,

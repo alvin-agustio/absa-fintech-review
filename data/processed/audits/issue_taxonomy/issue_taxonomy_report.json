@@ -1,0 +1,228 @@
+{
+  "input_csv": "C:\\Users\\alvin\\Downloads\\skripsi\\data\\processed\\dataset_absa_v2.csv",
+  "rows_loaded": 270329,
+  "rows_long": 53366,
+  "generic_examples_rows": 9,
+  "summary": [
+    {
+      "aspect": "risk",
+      "aspect_label": "Risk",
+      "negative_rows": 10454,
+      "specific_rows": 8464,
+      "generic_rows": 1990,
+      "specific_coverage_pct": 81.0,
+      "top_issue": "Limit, approval, dan pencairan",
+      "top_issue_count": 5385,
+      "top_issue_share_pct": 51.5,
+      "top_specific_issue": "Limit, approval, dan pencairan",
+      "top_specific_issue_count": 5385,
+      "aspect_presence_hit_rate_pct": 68.5,
+      "generic_top_phrases": [
+        "bisa pakai",
+        "tapi bisa",
+        "bisa gunakan"
+      ]
+    },
+    {
+      "aspect": "trust",
+      "aspect_label": "Trust",
+      "negative_rows": 3392,
+      "specific_rows": 1829,
+      "generic_rows": 1563,
+      "specific_coverage_pct": 53.9,
+      "top_issue": "Belum cukup spesifik",
+      "top_issue_count": 1563,
+      "top_issue_share_pct": 46.1,
+      "top_specific_issue": "Transparansi dan kejelasan",
+      "top_specific_issue_count": 582,
+      "aspect_presence_hit_rate_pct": 45.8,
+      "generic_top_phrases": [
+        "jatuh tempo",
+        "tepat waktu",
+        "pernah telat"
+      ]
+    },
+    {
+      "aspect": "service",
+      "aspect_label": "Service",
+      "negative_rows": 13676,
+      "specific_rows": 6185,
+      "generic_rows": 7491,
+      "specific_coverage_pct": 45.2,
+      "top_issue": "Belum cukup spesifik",
+      "top_issue_count": 7491,
+      "top_issue_share_pct": 54.8,
+      "top_specific_issue": "Proses dan pencairan",
+      "top_specific_issue_count": 2303,
+      "aspect_presence_hit_rate_pct": 37.0,
+      "generic_top_phrases": [
+        "jatuh tempo",
+        "bisa pakai",
+        "pernah telat"
+      ]
+    }
+  ],
+  "overlap": [
+    {
+      "keyword": "akses kontak",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "akun dibekukan",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "akun diblokir",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "balasan",
+      "aspect_count": 2,
+      "aspects": "service, trust"
+    },
+    {
+      "keyword": "belum cair",
+      "aspect_count": 2,
+      "aspects": "risk, service"
+    },
+    {
+      "keyword": "blokir akun",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "bocor data",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "cair",
+      "aspect_count": 2,
+      "aspects": "risk, service"
+    },
+    {
+      "keyword": "customer service",
+      "aspect_count": 2,
+      "aspects": "service, trust"
+    },
+    {
+      "keyword": "data bocor",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "data pribadi",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "disalahgunakan",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "gagal cair",
+      "aspect_count": 2,
+      "aspects": "risk, service"
+    },
+    {
+      "keyword": "hapus akun",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "hapus data",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "izin akses",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "kontak darurat",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "nomor kontak",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "pencairan",
+      "aspect_count": 2,
+      "aspects": "risk, service"
+    },
+    {
+      "keyword": "penutupan akun",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "privasi",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "respon admin",
+      "aspect_count": 2,
+      "aspects": "service, trust"
+    },
+    {
+      "keyword": "respon lambat",
+      "aspect_count": 2,
+      "aspects": "service, trust"
+    },
+    {
+      "keyword": "riba",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "sebar data",
+      "aspect_count": 2,
+      "aspects": "risk, trust"
+    },
+    {
+      "keyword": "tidak bisa login",
+      "aspect_count": 2,
+      "aspects": "service, trust"
+    },
+    {
+      "keyword": "tidak dibalas",
+      "aspect_count": 2,
+      "aspects": "service, trust"
+    }
+  ],
+  "pair_overlap": [
+    {
+      "aspect_left": "Risk",
+      "aspect_right": "Trust",
+      "shared_count": 17,
+      "shared_keywords": "akses kontak, akun dibekukan, akun diblokir, blokir akun, bocor data, data bocor, data pribadi, disalahgunakan, hapus akun, hapus data, izin akses, kontak darurat, nomor kontak, penutupan akun, privasi, riba, sebar data"
+    },
+    {
+      "aspect_left": "Risk",
+      "aspect_right": "Service",
+      "shared_count": 4,
+      "shared_keywords": "belum cair, cair, gagal cair, pencairan"
+    },
+    {
+      "aspect_left": "Trust",
+      "aspect_right": "Service",
+      "shared_count": 6,
+      "shared_keywords": "balasan, customer service, respon admin, respon lambat, tidak bisa login, tidak dibalas"
+    }
+  ],
+  "recommendations": [
+    "Audit bucket umum paling banyak di aspek dengan generic_rows tertinggi, lalu pecah frasa yang paling sering muncul.",
+    "Tambah keyword/frasa untuk issue yang masih sering jatuh ke Belum cukup spesifik.",
+    "Kurangi overlap keyword bersama, terutama keyword yang muncul di risk, trust.",
+    "Pertahankan corpus besar sebagai bahan audit taxonomy, lalu refine issue rules sebelum menambah corpus baru."
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "baseline": {
+    "experiment_family": "baseline",
+    "training_regime": "full_finetune",
+    "uncertainty_enabled": false,
+    "comparison_group": "baseline",
+    "accuracy": 0.9790240191283556,
+    "f1_macro": 0.8766317231404361,
+    "f1_weighted": 0.9784413071155073,
+    "n_train": 33121,
+    "n_test": 9201,
+    "total_params": null,
+    "trainable_params": null,
+    "trainable_pct": null,
+    "training_time_seconds": null,
+    "uncertainty_source_model_id": null
+  }
+}

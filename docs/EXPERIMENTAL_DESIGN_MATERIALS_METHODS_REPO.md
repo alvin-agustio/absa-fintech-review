@@ -19,7 +19,7 @@ flowchart TD
     E --> F[Official cohort + v2 intersection<br/>48,763 review-level rows]
     F --> G[Aspect flattening<br/>53,366 aspect-level instances]
     G --> H[Baseline + LoRA training]
-    H --> I[MC Dropout on baseline epoch 5<br/>30 stochastic passes]
+    H --> I[MC Dropout per family model<br/>30 stochastic passes]
     I --> J[Noise detection<br/>1,117 noisy candidates]
     J --> K[Filtered subset<br/>52,249 clean instances]
     K --> L[Retrained FT + Retrained LoRA]
@@ -260,7 +260,7 @@ Table 5 merangkum hasil filtering ini.
 |---|---:|
 | Total aspect-level rows | 53,366 |
 | MC passes | 30 |
-| Reference model | `models/baseline/epoch_5/model` |
+| Reference model | Family-specific model path, contoh: `models/baseline/epoch_15/model` atau `models/lora/epoch_15/model` |
 | Uncertainty metric used for filtering | `uncertainty_entropy` |
 | High-uncertainty quantile | 0.8 |
 | Entropy threshold | 0.008582847 |
