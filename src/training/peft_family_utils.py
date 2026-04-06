@@ -90,7 +90,7 @@ class ABSADataset(Dataset):
 
 
 class AdaLoraStepCallback(TrainerCallback):
-    def on_step_end(self, args, state, control, model=None, **kwargs):
+    def on_pre_optimizer_step(self, args, state, control, model=None, **kwargs):
         if model is None:
             return
         if hasattr(model, "update_and_allocate"):
