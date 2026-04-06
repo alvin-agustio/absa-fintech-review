@@ -136,6 +136,7 @@ def main():
         num_labels=3,
         id2label=ID2LABEL,
         label2id=LABEL2ID,
+        ignore_mismatched_sizes=True,
     )
 
     training_args = TrainingArguments(

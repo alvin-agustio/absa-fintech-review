@@ -34,6 +34,7 @@ echo "[5/6] Installing CUDA-enabled PyTorch from ${TORCH_INDEX_URL}..."
 
 echo "[6/6] Installing project dependencies..."
 "${VENV_DIR}/bin/python" -m pip install -r "${ROOT_DIR}/requirements.txt"
+"${VENV_DIR}/bin/python" -m pip install bitsandbytes
 
 echo
 echo "Setup complete."

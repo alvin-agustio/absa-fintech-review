@@ -152,7 +152,11 @@ def main():
     test_dataset = ABSADataset(test_enc, test_df["label_id"].tolist())
 
     base_model = AutoModelForSequenceClassification.from_pretrained(
-        args.model_name, num_labels=3, id2label=ID2LABEL, label2id=LABEL2ID
+        args.model_name,
+        num_labels=3,
+        id2label=ID2LABEL,
+        label2id=LABEL2ID,
+        ignore_mismatched_sizes=True,
     )
 
     lora_config = LoraConfig(

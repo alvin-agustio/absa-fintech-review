@@ -192,6 +192,7 @@ def load_base_model(model_name: str, spec: PeftFamilySpec):
         "num_labels": 3,
         "id2label": ID2LABEL,
         "label2id": LABEL2ID,
+        "ignore_mismatched_sizes": True,
     }
 
     if spec.use_qlora:
