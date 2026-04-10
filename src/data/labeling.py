@@ -1,8 +1,8 @@
 ﻿"""
-LLM-based Labeling with Gemini 2.5 Flash
-==========================================
-Annotate reviews for ABSA: Risk, Trust, Service Quality aspects
-with Positive/Negative/Neutral sentiment using Google Gemini.
+LLM-based silver labeling for ABSA
+==================================
+Annotate Indonesian fintech reviews for Risk, Trust, and Service
+using an OpenAI-compatible API provider.
 
 Usage:
     python labeling.py
@@ -22,7 +22,15 @@ from dotenv import load_dotenv
 
 import sys
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[2]))
-from config import DATA_PROCESSED, GROQ_MODEL, GROQ_BATCH_SIZE, SUMOPOD_MODEL, SUMOPOD_BATCH_SIZE
+from config import (
+    DATA_PROCESSED,
+    DATASET_ABSA_V2_PATH,
+    GROQ_BATCH_SIZE,
+    GROQ_MODEL,
+    REVIEWS_CLEAN_V2_PATH,
+    SUMOPOD_BATCH_SIZE,
+    SUMOPOD_MODEL,
+)
 
 load_dotenv()
 
@@ -256,7 +264,7 @@ def select_reviews_from_manifest(
     missing_ids = [review_id for review_id in manifest_df["review_id"].tolist() if review_id not in reviews_lookup.index]
     if missing_ids:
         raise ValueError(
-            f"Manifest contains review_id(s) not found in reviews_clean.csv: {missing_ids[:10]}"
+            f"Manifest contains review_id(s) not found in {REVIEWS_CLEAN_V2_PATH.name}: {missing_ids[:10]}"
         )
 
     cohort_ids = manifest_df["review_id"].tolist()
@@ -693,7 +701,7 @@ def main():
         timeout=120.0,
     )
 
-    input_path = DATA_PROCESSED / "reviews_clean.csv"
+    input_path = REVIEWS_CLEAN_V2_PATH
     if not input_path.exists():
         raise FileNotFoundError(f"Clean data not found: {input_path}")
 
@@ -881,7 +889,7 @@ def main():
         how="left",
     )
 
-    output_path = DATA_PROCESSED / "dataset_absa.csv"
+    output_path = DATASET_ABSA_V2_PATH
     merged.to_csv(output_path, index=False, encoding="utf-8-sig")
 
     # Print summary

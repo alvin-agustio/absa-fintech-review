@@ -331,7 +331,7 @@ def run_live_analysis(
         if review_frames
         else pd.DataFrame(columns=["review_id_ext", "app_id", "app_name", "rating", "review_date", "review_text_raw", "review_text_clean"])
     )
-    job_id = job_key[:12]
+    job_id = job_key
     job_meta = {
         "job_id": job_id,
         "job_key": job_key,

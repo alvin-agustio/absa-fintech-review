@@ -36,7 +36,6 @@ from src.dashboard.live import run_live_analysis
 from src.dashboard.registry import build_model_registry, default_model_row
 from src.dashboard.research import load_gold_summary, load_gold_subset, load_weak_overview
 from src.dashboard.storage import DashboardStore
-from src.inference import ABSAPredictor
 
 try:
     from src.dashboard.summary_rules import build_summary_payload as dashboard_summary_payload
@@ -944,7 +943,9 @@ def get_weak_overview_data() -> pd.DataFrame:
 
 
 @st.cache_resource(show_spinner=True)
-def get_predictor(model_dir: str) -> ABSAPredictor:
+def get_predictor(model_dir: str):
+    from src.inference import ABSAPredictor
+
     return ABSAPredictor(model_dir)
 
 

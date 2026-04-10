@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
 
 from config import GOLD_TEMPLATE_PATH, ROOT_DIR
+
+
+def _optional_env_path(name: str) -> Path | None:
+    value = os.getenv(name)
+    return Path(value).expanduser() if value else None
 
 
 GOLD_EVAL_DIRS = [
@@ -15,17 +21,14 @@ GOLD_EVAL_DIRS = [
 
 WEAK_EVAL_CANDIDATES = [
     ROOT_DIR / "data" / "processed" / "evaluation" / "epoch_comparison_summary.csv",
-    ROOT_DIR / "droplet" / "skripsi_eval_core" / "data" / "processed" / "evaluation" / "epoch_comparison_summary.csv",
 ]
 
 UNCERTAINTY_SUMMARY_CANDIDATES = [
     ROOT_DIR / "data" / "processed" / "uncertainty" / "mc_summary.json",
-    ROOT_DIR / "droplet" / "skripsi_eval_core" / "data" / "processed" / "uncertainty" / "mc_summary.json",
 ]
 
 NOISE_SUMMARY_CANDIDATES = [
     ROOT_DIR / "data" / "processed" / "noise" / "noise_summary.json",
-    ROOT_DIR / "droplet" / "skripsi_eval_core" / "data" / "processed" / "noise" / "noise_summary.json",
 ]
 
 
@@ -37,7 +40,8 @@ def _resolve_first_existing(paths: list[Path]) -> Path | None:
 
 
 def load_gold_overview() -> pd.DataFrame:
-    gold_dir = _resolve_first_existing(GOLD_EVAL_DIRS)
+    env_dir = _optional_env_path("SKRIPSI_GOLD_EVAL_DIR")
+    gold_dir = _resolve_first_existing(([env_dir] if env_dir else []) + GOLD_EVAL_DIRS)
     if gold_dir is None:
         return pd.DataFrame()
     overview_path = gold_dir / "gold_evaluation_overview.csv"
@@ -45,7 +49,8 @@ def load_gold_overview() -> pd.DataFrame:
 
 
 def load_gold_summary() -> dict:
-    gold_dir = _resolve_first_existing(GOLD_EVAL_DIRS)
+    env_dir = _optional_env_path("SKRIPSI_GOLD_EVAL_DIR")
+    gold_dir = _resolve_first_existing(([env_dir] if env_dir else []) + GOLD_EVAL_DIRS)
     if gold_dir is None:
         return {}
     summary_path = gold_dir / "gold_evaluation_summary.json"
@@ -53,22 +58,26 @@ def load_gold_summary() -> dict:
 
 
 def load_weak_overview() -> pd.DataFrame:
-    path = _resolve_first_existing(WEAK_EVAL_CANDIDATES)
+    env_path = _optional_env_path("SKRIPSI_WEAK_EVAL_CSV")
+    path = _resolve_first_existing(([env_path] if env_path else []) + WEAK_EVAL_CANDIDATES)
     return pd.read_csv(path) if path else pd.DataFrame()
 
 
 def load_uncertainty_summary() -> dict:
-    path = _resolve_first_existing(UNCERTAINTY_SUMMARY_CANDIDATES)
+    env_path = _optional_env_path("SKRIPSI_UNCERTAINTY_SUMMARY_JSON")
+    path = _resolve_first_existing(([env_path] if env_path else []) + UNCERTAINTY_SUMMARY_CANDIDATES)
     return json.loads(path.read_text(encoding="utf-8")) if path else {}
 
 
 def load_noise_summary() -> dict:
-    path = _resolve_first_existing(NOISE_SUMMARY_CANDIDATES)
+    env_path = _optional_env_path("SKRIPSI_NOISE_SUMMARY_JSON")
+    path = _resolve_first_existing(([env_path] if env_path else []) + NOISE_SUMMARY_CANDIDATES)
     return json.loads(path.read_text(encoding="utf-8")) if path else {}
 
 
 def gold_model_dir(model_id: str) -> Path | None:
-    gold_dir = _resolve_first_existing(GOLD_EVAL_DIRS)
+    env_dir = _optional_env_path("SKRIPSI_GOLD_EVAL_DIR")
+    gold_dir = _resolve_first_existing(([env_dir] if env_dir else []) + GOLD_EVAL_DIRS)
     if gold_dir is None:
         return None
     candidate = gold_dir / model_id
@@ -101,7 +110,8 @@ def build_model_ladder(registry_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def hardest_cases_across_models(limit: int = 20) -> pd.DataFrame:
-    gold_dir = _resolve_first_existing(GOLD_EVAL_DIRS)
+    env_dir = _optional_env_path("SKRIPSI_GOLD_EVAL_DIR")
+    gold_dir = _resolve_first_existing(([env_dir] if env_dir else []) + GOLD_EVAL_DIRS)
     if gold_dir is None:
         return pd.DataFrame()
 
@@ -132,7 +142,8 @@ def hardest_cases_across_models(limit: int = 20) -> pd.DataFrame:
 
 
 def absent_vote_tendency(limit: int = 20) -> pd.DataFrame:
-    gold_dir = _resolve_first_existing(GOLD_EVAL_DIRS)
+    env_dir = _optional_env_path("SKRIPSI_GOLD_EVAL_DIR")
+    gold_dir = _resolve_first_existing(([env_dir] if env_dir else []) + GOLD_EVAL_DIRS)
     if gold_dir is None:
         return pd.DataFrame()
 
@@ -167,7 +178,8 @@ def absent_vote_tendency(limit: int = 20) -> pd.DataFrame:
 
 
 def build_gold_eval_fact() -> pd.DataFrame:
-    gold_dir = _resolve_first_existing(GOLD_EVAL_DIRS)
+    env_dir = _optional_env_path("SKRIPSI_GOLD_EVAL_DIR")
+    gold_dir = _resolve_first_existing(([env_dir] if env_dir else []) + GOLD_EVAL_DIRS)
     if gold_dir is None:
         return pd.DataFrame()
 

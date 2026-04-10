@@ -10,27 +10,68 @@ __pycache__/
 .pytest_cache/
 src/**/__pycache__/
 
-# Training outputs and large artifacts
-models/
-data/raw/
-data/processed/archive/
-data/processed/*.csv
-data/processed/*.jsonl
-data/processed/*.json
-data/processed/dashboard/
-
-# Keep documentation folders under processed data if needed
-!data/processed/diamond/
-!data/processed/diamond/*.md
-
-# Keep only the active training dataset public
-!data/processed/dataset_absa_50k_v2_intersection.csv
-
-# Logs and local outputs
+# Local app/debug outputs
+.playwright-cli/
+output/
+artifacts/playwright/
+artifacts/releases/
+artifacts/vast_deploy/
+streamlit.err.log
+streamlit.out.log
 *.log
 
-# Server result artifacts (droplet downloads) — commit selectively via results/
+# Training outputs and machine-local snapshots
+models/
 droplet/
+data/raw/
+data/processed/archive/
+data/processed/dashboard/
+data/processed/*.csv
+data/processed/*.json
+data/processed/*.jsonl
+data/processed/annotations_raw.jsonl
+data/processed/reviews_clean.csv
+data/processed/reviews_clean_v2.csv
+data/processed/dataset_absa.csv
+data/processed/dataset_absa_v2.csv
+
+# Generated evaluation details that are too verbose for the public repo
+data/processed/evaluation/epoch_comparison_wide.csv
+data/processed/evaluation/evaluation_detailed.json
+data/processed/evaluation/qlora_rocm_smoke_test.json
+data/processed/diamond/evaluation/**/gold_predictions.csv
+data/processed/diamond/evaluation/**/gold_summary.json
+data/processed/diamond/evaluation_all_models/**/gold_predictions.csv
+data/processed/diamond/evaluation_all_models/**/gold_summary.json
+
+# Temporary paper assets
+docs/paper_assets/*.png
+docs/paper_assets/*.csv
+docs/paper_assets/_tmp_*
+
+# Keep curated public data assets
+!data/processed/dataset_absa_50k_v2_intersection.csv
+!data/processed/manifests/
+!data/processed/manifests/**
+!data/processed/evaluation/
+!data/processed/evaluation/comparison_group_best.csv
+!data/processed/evaluation/comparison_group_best.json
+!data/processed/evaluation/epoch_comparison_summary.csv
+!data/processed/evaluation/epoch_comparison_summary.json
+!data/processed/evaluation/evaluation_summary.json
+!data/processed/evaluation/model_comparison_table.csv
+!data/processed/evaluation/model_comparison_table.json
+!data/processed/diamond/
+!data/processed/diamond/*.md
+!data/processed/diamond/template_anotator_tunggal_balanced_300_aspect_rows.csv
+!data/processed/diamond/evaluation/
+!data/processed/diamond/evaluation/gold_evaluation_overview.csv
+!data/processed/diamond/evaluation/gold_evaluation_summary.json
+!data/processed/diamond/evaluation_all_models/
+!data/processed/diamond/evaluation_all_models/gold_evaluation_overview.csv
+!data/processed/diamond/evaluation_all_models/gold_evaluation_summary.json
+!docs/paper_assets/used/
+!docs/paper_assets/used/**
 
 # IDE
 .vscode/

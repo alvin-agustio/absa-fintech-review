@@ -5,7 +5,7 @@ Compare: Baseline vs LoRA vs Retrained models.
 Generates comprehensive evaluation summary.
 
 Usage:
-    python evaluate.py
+    python -m src.evaluation.evaluate
 """
 
 import json
@@ -375,6 +375,10 @@ def collect_epoch_results() -> pd.DataFrame:
                         "eval_loss": row.get("eval_loss"),
                         "training_time_seconds": row.get("cumulative_training_seconds"),
                         "epoch_duration_seconds": row.get("epoch_duration_seconds"),
+                        "trainable_params": metrics.get("trainable_params") if metrics else None,
+                        "trainable_pct": metrics.get("trainable_pct") if metrics else None,
+                        "n_train": metrics.get("n_train") if metrics else None,
+                        "n_test": metrics.get("n_test") if metrics else None,
                     })
                 continue
 
@@ -439,6 +443,9 @@ def print_epoch_summary(df: pd.DataFrame) -> None:
         return
 
     printable = df.copy()
+    for col in ["trainable_params", "trainable_pct", "n_train", "n_test", "source"]:
+        if col not in printable.columns:
+            printable[col] = pd.NA
     for col in ["accuracy", "precision_macro", "recall_macro", "f1_macro", "f1_weighted", "eval_loss"]:
         printable[col] = printable[col].map(lambda x: f"{x:.4f}" if pd.notna(x) else "N/A")
     printable["training_time_seconds"] = printable["training_time_seconds"].map(
@@ -449,20 +456,21 @@ def print_epoch_summary(df: pd.DataFrame) -> None:
     )
 
     print("\n[EPOCH] Epoch sweep summary:")
-    print(
-        printable[[
-            "model",
-            "epochs",
-            "accuracy",
-            "precision_macro",
-            "recall_macro",
-            "f1_macro",
-            "f1_weighted",
-            "eval_loss",
-            "training_time_seconds",
-            "source",
-        ]].to_string(index=False)
-    )
+    summary_columns = [
+        "model",
+        "epochs",
+        "accuracy",
+        "precision_macro",
+        "recall_macro",
+        "f1_macro",
+        "f1_weighted",
+        "eval_loss",
+        "training_time_seconds",
+        "source",
+        "trainable_params",
+    ]
+    available_columns = [col for col in summary_columns if col in printable.columns]
+    print(printable[available_columns].to_string(index=False))
 
     best_idx = df["f1_macro"].astype(float).idxmax()
     best_row = df.loc[best_idx]

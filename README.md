@@ -1,80 +1,39 @@
 # Fintech Review ABSA
 
-![Status](https://img.shields.io/badge/status-on%20progress-ffb703)
+![Status](https://img.shields.io/badge/status-portfolio%20ready-2a9d8f)
 ![Task](https://img.shields.io/badge/task-ABSA-219ebc)
 ![Language](https://img.shields.io/badge/language-Indonesian-2a9d8f)
 ![Model](https://img.shields.io/badge/model-IndoBERT%20base%20p1-264653)
-![Training](https://img.shields.io/badge/training-Baseline%20%2B%20LoRA-e76f51)
+![Training](https://img.shields.io/badge/training-Baseline%20%2B%20PEFT-e76f51)
+![License](https://img.shields.io/badge/license-MIT-1d3557)
 
-An end-to-end Aspect-Based Sentiment Analysis pipeline for Google Play Store reviews of Indonesian fintech lending apps.
+An end-to-end Aspect-Based Sentiment Analysis pipeline for Indonesian fintech lending app reviews from the Google Play Store. The project combines data collection, text normalization, weak-label curation, transformer fine-tuning, evaluation, and a Streamlit dashboard for interactive analysis.
 
-This project focuses on three business-relevant aspects:
+## Why This Project
+
+Most sentiment-analysis demos stop at binary polarity. This repository pushes further into aspect-level sentiment on noisy Indonesian user reviews, where one sentence can mix complaints about risk, trust, and service at the same time.
+
+This makes the project useful as a portfolio artifact for:
+
+- practical ABSA pipeline design
+- Indonesian text normalization and slang handling
+- weak-label to cleaner-dataset reconciliation
+- IndoBERT fine-tuning and PEFT comparison
+- research-oriented experimentation with an application layer on top
+
+## Problem Scope
+
+The project models three business-relevant aspects:
 
 - `risk`
 - `trust`
 - `service`
 
-with three sentiment labels:
+Each aspect is classified into:
 
 - `Negative`
 - `Neutral`
 - `Positive`
-
-The repository is being developed as both:
-
-- an active thesis/research workspace
-- a public portfolio project for NLP, model experimentation, and applied ML engineering
-
-## Why This Project
-
-Most sentiment projects stop at generic positive-vs-negative classification. This one pushes further into aspect-level analysis on Indonesian fintech reviews, where user language is noisy, colloquial, and often mixes product trust, service quality, and perceived risk in the same review.
-
-That makes the project useful for demonstrating:
-
-- practical ABSA pipeline design
-- weak-label to cleaner-dataset reconciliation
-- IndoBERT fine-tuning and LoRA comparison
-- research-oriented experimentation with portfolio-grade packaging
-
-## Current Status
-
-This repository is still **on progress**.
-
-What is already in place:
-
-- v2 preprocessing pipeline
-- active v2 training dataset configuration
-- baseline and LoRA training scripts
-- evaluation pipeline
-- Streamlit dashboard
-- manual gold subset preparation
-
-What is still ongoing:
-
-- fresh training runs on the active v2 setup
-- final comparison on manually annotated gold data
-- stronger public demo assets such as screenshots and sample outputs
-
-For the canonical experiment procedure after taxonomy freeze, see `docs/MODEL_EPOCH_AND_EXPERIMENT_PROTOCOL_2026-03-31.md`. If you already have an `epoch_comparison_summary.csv`, the helper `scripts/recommend_epoch_from_epoch_sweep.py` can turn it into a readable epoch recommendation.
-
-## Pipeline Overview
-
-```mermaid
-flowchart LR
-	A[Google Play Reviews] --> B[Scraping]
-	B --> C[Preprocessing v2]
-	C --> D[Normalized Review Corpus]
-	D --> E[Historical Silver Labels from v1]
-	E --> F[review_id Intersection]
-	F --> G[Active Training Dataset v2]
-	G --> H1[Baseline Fine-Tuning]
-	G --> H2[LoRA Fine-Tuning]
-	H1 --> I[Evaluation on Silver Split]
-	H2 --> I
-	I --> J[Best Model Selection]
-	J --> K[Manual Gold Annotation]
-	K --> L[Final Validation Against Human Labels]
-```
 
 ## Project Snapshot
 
@@ -83,85 +42,93 @@ flowchart LR
 | Domain | Indonesian fintech app reviews |
 | Apps | Kredivo, Akulaku |
 | Task | 3-aspect ABSA |
-| Labels | Negative, Neutral, Positive |
 | Backbone | `indobenchmark/indobert-base-p1` |
-| Training Tracks | Baseline full fine-tuning, LoRA |
-| Active Dataset | `data/processed/dataset_absa_50k_v2_intersection.csv` |
-| Final Validation Direction | Manual single-annotator gold subset |
+| Training tracks | Baseline full fine-tuning, LoRA, DoRA, AdaLoRA, QLoRA |
+| Active public dataset | `data/processed/dataset_absa_50k_v2_intersection.csv` |
+| Gold evaluation direction | Manual single-annotator gold subset |
+| Dashboard | Streamlit observatory for live and offline analysis |
 
-## Experiment Design
+## Pipeline Overview
 
 ```mermaid
-flowchart TD
-	A[reviews_clean_v2.csv] --> B[dataset_absa_v2.csv]
-	B --> C[dataset_absa_50k_v2_intersection.csv]
-	C --> D[train_baseline.py]
-	C --> E[train_lora.py]
-	D --> F[evaluate.py]
-	E --> F
-	F --> G[Compare metrics and errors]
-	G --> H[Select best checkpoint]
-	H --> I[Validate on gold subset]
+flowchart LR
+    A[Google Play Reviews] --> B[Scraping]
+    B --> C[Preprocessing v2]
+    C --> D[Normalized Review Corpus]
+    D --> E[Historical Silver Labels]
+    E --> F[review_id Intersection]
+    F --> G[Active Training Dataset]
+    G --> H1[Baseline FT]
+    G --> H2[PEFT Variants]
+    H1 --> I[Weak-label Evaluation]
+    H2 --> I
+    I --> J[Best Model Selection]
+    J --> K[Manual Gold Validation]
 ```
+
+## What Is In This Public Repo
+
+Included:
+
+- source code for the data, training, evaluation, and dashboard pipeline
+- curated processed assets that help explain the work
+- evaluation summaries and comparison tables
+- annotation template and supporting documentation
+- selected visuals used for paper and portfolio presentation
+
+Excluded:
+
+- raw scraped data dumps
+- trained model weights and checkpoints
+- droplet snapshots and machine-local folders
+- debug outputs, cache files, and temporary artifacts
+- secrets and local environment files
 
 ## Repository Layout
 
 ```text
 .
-├── app.py                          # Streamlit dashboard (entry point)
-├── config.py                       # central paths and model configuration
-├── requirements.txt
-│
-├── src/                            # all pipeline Python source modules
-│   ├── inference.py                # ABSAPredictor class used by app.py
-│   ├── data/
-│   │   ├── preprocess.py           # review text cleaning and normalization
-│   │   ├── scrape_reviews.py       # Google Play scraper
-│   │   ├── resume_scrape.py        # incremental scrape resume helper
-│   │   └── labeling.py             # LLM-based silver labeling (Groq)
-│   ├── training/
-│   │   ├── train_baseline.py       # full fine-tuning pipeline
-│   │   ├── train_lora.py           # LoRA fine-tuning pipeline
-│   │   ├── train_lora_filtered.py  # LoRA on noise-filtered data
-│   │   └── retrain_filtered.py     # retraining on clean subset
-│   └── evaluation/
-│       ├── evaluate.py             # experiment comparison and metrics
-│       ├── detect_label_noise.py   # weak-label noise detection
-│       └── predict_mc_dropout.py   # MC Dropout uncertainty estimation
-│
-├── scripts/                        # execution runners and data pipeline scripts
-│   ├── run_baseline_epochs.ps1     # baseline epoch sweep
-│   ├── run_lora_epochs.ps1         # LoRA epoch sweep
-│   ├── run_training_experiments.ps1
-│   ├── build_v2_intersection.py    # build active v2 training dataset
-│   ├── audit_normalization_v2.py   # audit slang normalization coverage
-│   └── setup_digitalocean_gpu.sh
-│
-├── docs/                           # project documentation
-│   ├── PROJECT_STATUS.md
-│   ├── CONTEXT.md                  # active project context summary
-│   ├── DIAMOND_STANDARD_GUIDELINES.md
-│   ├── DIGITALOCEAN_GPU_SETUP.md
-│   └── EXECUTION_TASKLIST_UNTIL_EVALUATE.md
-│
-└── data/
-    ├── processed/                  # datasets, manifests, evaluation outputs
-    │   └── diamond/                # manual gold annotation assets
-    └── resources/                  # normalization lexicon and whitelist
+|-- app.py
+|-- config.py
+|-- requirements.txt
+|-- src/
+|   |-- data/
+|   |-- training/
+|   |-- evaluation/
+|   |-- dashboard/
+|   `-- inference.py
+|-- scripts/
+|-- docs/
+|-- data/
+|   |-- processed/
+|   `-- resources/
+`-- tests/
 ```
 
-## Key Methodology Notes
+Key files:
 
-This part matters if you are reading the repo as a research artifact.
+- `app.py`: Streamlit dashboard entry point
+- `src/inference.py`: model loading and multi-aspect prediction
+- `src/training/train_baseline.py`: baseline fine-tuning pipeline
+- `src/training/peft_family_utils.py`: shared PEFT training utilities
+- `src/evaluation/evaluate.py`: evaluation summary builder
+- `scripts/build_v2_intersection.py`: active dataset builder
+- `scripts/recommend_epoch_from_epoch_sweep.py`: epoch recommendation helper
 
-- Historical silver labels were generated on v1 data.
-- The active v2 dataset was formed by intersecting v1 silver labels with the v2-cleaned corpus using `review_id`.
-- The current gold validation subset is a **single-annotator gold subset**, not a full diamond multi-annotator setup.
-- Public GitHub contents intentionally exclude large raw datasets, processed full datasets, and trained model artifacts.
+## Reproducibility Notes
+
+This repo is curated for public review, not for shipping full model weights. The current public setup is intended to be understandable and partially reproducible without bundling all private or large artifacts.
+
+Important context:
+
+- the active training dataset is `data/processed/dataset_absa_50k_v2_intersection.csv`
+- the labeling pipeline targets the v2 corpus and writes to `dataset_absa_v2.csv`
+- gold evaluation artifacts in Git are kept at summary level; detailed per-model prediction dumps are intentionally excluded
+- dashboard research loaders prefer repo-local assets and can optionally be pointed to external artifacts through environment variables such as `SKRIPSI_MODEL_ROOT` and `SKRIPSI_GOLD_EVAL_DIR`
 
 ## Quick Start
 
-### Environment Setup
+### 1. Environment Setup
 
 ```powershell
 python -m venv .venv
@@ -169,89 +136,73 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### Run Training
+Optional:
 
-Baseline sweep:
+- copy `.env.example` to `.env` if you want to run LLM-assisted silver labeling
+
+### 2. Run the Dashboard
+
+```powershell
+python -m streamlit run app.py
+```
+
+### 3. Run Evaluation Summary
+
+```powershell
+python -m src.evaluation.evaluate
+```
+
+### 4. Run Tests
+
+```powershell
+pytest -q
+```
+
+## Training Entry Points
+
+PowerShell runners:
 
 ```powershell
 .\scripts\run_baseline_epochs.ps1
-```
-
-LoRA sweep:
-
-```powershell
 .\scripts\run_lora_epochs.ps1
-```
-
-Run both tracks:
-
-```powershell
+.\scripts\run_peft_hparam_sweep.ps1
 .\scripts\run_training_experiments.ps1
 ```
 
-### Run Evaluation
+If you are reading this repo as a research artifact, the main experiment reference is:
 
-```powershell
-.\.venv\Scripts\python.exe evaluate.py
-```
+- `docs/MODEL_EPOCH_AND_EXPERIMENT_PROTOCOL_2026-03-31.md`
 
-### Run Dashboard
+Supporting documentation:
 
-```powershell
-.\.venv\Scripts\python.exe -m streamlit run app.py
-```
+- `docs/MODELLING_PIPELINE_CONCISE.md`
+- `docs/MODEL_BUILDING_PIPELINE_SIMPLE.md`
+- `docs/LABEL_SCHEMA_FINTECH_ABSA.md`
+- `docs/UNCERTAINTY_DIAMOND_STANDARD_RULES.md`
+- `docs/ISSUE_TAXONOMY_DIAMOND_STANDARD_2026-03-31.md`
 
-## Main Files to Explore
+## Portfolio Highlights
 
-| File | Purpose |
-| --- | --- |
-| `src/training/train_baseline.py` | baseline full fine-tuning |
-| `src/training/train_lora.py` | parameter-efficient LoRA fine-tuning |
-| `src/evaluation/evaluate.py` | experiment comparison and evaluation summary |
-| `app.py` | Streamlit interface for live review analysis |
-| `scripts/run_baseline_epochs.ps1` | baseline experiment runner |
-| `scripts/run_lora_epochs.ps1` | LoRA experiment runner |
-| `scripts/build_v2_intersection.py` | build active v2 intersection dataset |
-| `scripts/audit_normalization_v2.py` | audit normalization coverage and candidate slang mappings |
+This repository demonstrates:
 
-## Public Repo Scope
+- end-to-end NLP workflow design
+- applied Indonesian-language ABSA
+- experiment tracking and comparison discipline
+- parameter-efficient fine-tuning with transformer models
+- translation of research outputs into an interactive product layer
 
-This GitHub version is intentionally lightweight.
+## Selected Assets
 
-Excluded from version control:
+Portfolio-friendly visuals are kept in:
 
-- trained model directories
-- raw scraped datasets
-- full processed research datasets
-- local environment files and secrets
+- `docs/paper_assets/used/`
 
-Included because they are useful for understanding the work:
+## Current Limitations
 
-- code for the full pipeline
-- experiment runners
-- methodology notes
-- normalization resources
-- manifests and annotation support assets
+- model checkpoints are not bundled in this public repository
+- the gold subset is single-annotator, not a full multi-annotator diamond setup
+- some GPU-specific scripts assume a separate training environment
 
-## Portfolio Value
+## License
 
-This project demonstrates practical experience in:
-
-- natural language processing
-- Indonesian text normalization
-- aspect-based sentiment analysis
-- weak supervision workflow design
-- experiment tracking mindset
-- LoRA fine-tuning for transformer models
-- Streamlit app prototyping for ML systems
-
-## Next Milestones
-
-- add screenshots and result tables to enrich the public presentation
-- add a tiny public sample dataset for demo reproducibility
-- complete fresh v2 training comparison
-- validate the best model against the manual gold subset
-- add a license and lightweight CI checks
-
-Characteristic:
-- Gunakan dengan bahasa yang mudah dimengerti, jangan terbelit-belit. Dan straight to the point.
+This project is released under the MIT License. See `LICENSE`.
