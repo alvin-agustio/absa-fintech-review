@@ -12,10 +12,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Status-Portfolio%20Ready-2A9D8F?style=flat-square" alt="Status" />
   <img src="https://img.shields.io/badge/Language-Indonesian-1D3557?style=flat-square" alt="Language" />
   <img src="https://img.shields.io/badge/Task-Aspect%20Based%20Sentiment%20Analysis-457B9D?style=flat-square" alt="Task" />
-  <img src="https://img.shields.io/badge/License-MIT-264653?style=flat-square" alt="License" />
 </p>
 
 <p align="center">
@@ -40,12 +38,11 @@ This matters because fintech reviews often combine multiple signals in one sente
 ## Platform Preview
 
 <p align="center">
-  <img src="docs/paper_assets/used/diagnosis_short_logic_end_to_end.png" alt="End-to-end diagnosis flow" width="46%" />
   <img src="docs/paper_assets/used/model_tradeoff_time_vs_human_f1.png" alt="Tradeoff chart" width="46%" />
+  <img src="docs/paper_assets/used/model_best_point_llm_vs_human_bar.png" alt="Best point comparison" width="46%" />
 </p>
 
 <p align="center">
-  <img src="docs/paper_assets/used/model_best_point_llm_vs_human_bar.png" alt="Best point comparison" width="46%" />
   <img src="docs/paper_assets/used/model_retraining_delta_slope.png" alt="Retraining delta slope" width="46%" />
 </p>
 
