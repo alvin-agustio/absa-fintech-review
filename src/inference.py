@@ -5,19 +5,16 @@ Loads the best trained model and provides prediction functions
 for the Streamlit dashboard.
 
 Usage (as module):
-    from inference import ABSAPredictor
+    from src.inference import ABSAPredictor
     predictor = ABSAPredictor("models/baseline/model")
     results = predictor.predict(["review text 1", "review text 2"])
 """
 
 from pathlib import Path
 
-import numpy as np
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-import sys
-sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[1]))
 from config import ASPECTS, ID2LABEL, MAX_LENGTH
 
 try:
