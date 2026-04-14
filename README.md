@@ -29,10 +29,10 @@
 ## Quick Preview
 
 <p align="center">
-  <img src="docs/paper_assets/used/diagnosis_short_logic_end_to_end.png" alt="Dashboard-style diagnosis preview" width="88%" />
+  <img src="docs/readme_assets/dashboard-tour.gif" alt="Live dashboard tour" width="88%" />
 </p>
 
-This preview shows the kind of short diagnostic output the project is designed to surface: not just whether sentiment is positive or negative, but which aspect is under pressure and what that likely means for follow-up.
+This is the actual Streamlit dashboard from the repository. The view is designed to make three things readable quickly: current scope, aspect-level health, and the short diagnosis or trend sections that follow below.
 
 ---
 
