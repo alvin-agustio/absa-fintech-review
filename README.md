@@ -32,7 +32,7 @@
   <img src="docs/readme_assets/dashboard-tour.gif" alt="Live dashboard tour" width="88%" />
 </p>
 
-This is the actual Streamlit dashboard from the repository. The view is designed to make three things readable quickly: current scope, aspect-level health, and the short diagnosis or trend sections that follow below.
+This is the actual Streamlit dashboard from the repository. The view is designed to make three things readable quickly: current coverage, aspect-level health, and the short diagnosis or trend sections that follow below.
 
 ---
 
