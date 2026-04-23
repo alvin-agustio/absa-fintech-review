@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import torch  # noqa: E402
+import torch.nn as nn  # noqa: E402
 
 from config import BASE_MODEL_NAME, MAX_LENGTH, QLORA_COMPUTE_DTYPE, QLORA_DOUBLE_QUANT, QLORA_QUANT_TYPE  # noqa: E402
 
@@ -76,6 +77,18 @@ def detect_backend() -> dict:
         "device_name": device_name,
         "device_memory_gb": total_memory_gb,
     }
+
+
+def replace_sequence_classifier_head(model) -> None:
+    for layer_name in ("classifier", "score"):
+        layer = getattr(model, layer_name, None)
+        if layer is None or not hasattr(layer, "in_features") or not hasattr(layer, "out_features"):
+            continue
+        use_bias = getattr(layer, "bias", None) is not None
+        replacement = nn.Linear(layer.in_features, layer.out_features, bias=use_bias)
+        replacement = replacement.to(device="cuda" if torch.cuda.is_available() else "cpu", dtype=torch.float32)
+        setattr(model, layer_name, replacement)
+        break
 
 
 def perform_checks(model_name: str, batch_size: int, max_length: int) -> dict:
@@ -160,9 +173,11 @@ def perform_checks(model_name: str, batch_size: int, max_length: int) -> dict:
             model = AutoModelForSequenceClassification.from_pretrained(
                 model_name,
                 num_labels=3,
+                ignore_mismatched_sizes=True,
                 quantization_config=quant_config,
                 device_map="auto",
             )
+            replace_sequence_classifier_head(model)
             model = prepare_model_for_kbit_training(model)
             config = LoraConfig(
                 task_type=TaskType.SEQ_CLS,
@@ -183,9 +198,7 @@ def perform_checks(model_name: str, batch_size: int, max_length: int) -> dict:
                 max_length=max_length,
                 return_tensors="pt",
             )
-            device = torch.device("cuda")
-            encoded = {k: v.to(device) for k, v in encoded.items()}
-            model.to(device)
+            encoded = {k: v.to("cuda") for k, v in encoded.items()}
             model.eval()
             with torch.no_grad():
                 outputs = model(**encoded)

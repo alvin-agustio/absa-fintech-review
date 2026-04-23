@@ -12,6 +12,7 @@ src/**/__pycache__/
 
 # Local app/debug outputs
 .playwright-cli/
+.playwright-mcp/
 output/
 artifacts/playwright/
 artifacts/releases/
@@ -19,6 +20,8 @@ artifacts/vast_deploy/
 streamlit.err.log
 streamlit.out.log
 *.log
+.codex-oauth-smoketest.txt
+AGENTS.md
 
 # Training outputs and machine-local snapshots
 models/

@@ -27,6 +27,15 @@ MODEL_ROOT_CANDIDATES = [
     ROOT_DIR / "models",
 ]
 
+PRIMARY_BUNDLED_MODEL_ROOT_GLOBS = [
+    ROOT_DIR / "droplet" / "new" / "*" / "models",
+]
+
+FALLBACK_BUNDLED_MODEL_ROOT_GLOBS = [
+    ROOT_DIR / "droplet" / "*" / "models",
+    ROOT_DIR / "droplet" / "*" / "*" / "models",
+]
+
 DISPLAY_NAME_MAP = {
     "baseline": "Baseline FT",
     "lora": "LoRA",
@@ -63,32 +72,95 @@ def resolve_first_existing(paths: list[Path]) -> Path | None:
     return None
 
 
-def discover_model_paths() -> dict[str, Path]:
-    discovered: dict[str, Path] = {}
-    env_root = _optional_env_path("SKRIPSI_MODEL_ROOT")
-    candidates = ([env_root] if env_root else []) + MODEL_ROOT_CANDIDATES
-    root = resolve_first_existing([path for path in candidates if path is not None])
-    if root is None:
-        return discovered
+def _looks_like_model_root(root: Path) -> bool:
+    if not root.exists() or not root.is_dir():
+        return False
 
     for family_dir in root.iterdir():
-        if not family_dir.is_dir():
-            continue
-        family = family_dir.name
-        if family not in FINAL_FAMILIES:
+        if not family_dir.is_dir() or family_dir.name not in FINAL_FAMILIES:
             continue
         for epoch_dir in family_dir.iterdir():
-            if not epoch_dir.is_dir() or not epoch_dir.name.startswith("epoch_"):
+            if (
+                epoch_dir.is_dir()
+                and epoch_dir.name.startswith("epoch_")
+                and (epoch_dir / "model").exists()
+            ):
+                return True
+    return False
+
+
+def discover_model_roots() -> list[Path]:
+    direct_candidates: list[Path] = []
+    primary_bundled_candidates: list[Path] = []
+    fallback_bundled_candidates: list[Path] = []
+    seen: set[Path] = set()
+    env_root = _optional_env_path("SKRIPSI_MODEL_ROOT")
+
+    configured_candidates = ([env_root] if env_root else []) + MODEL_ROOT_CANDIDATES
+    for candidate in configured_candidates:
+        if candidate is None:
+            continue
+        resolved = candidate.expanduser()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        direct_candidates.append(resolved)
+
+    for pattern in PRIMARY_BUNDLED_MODEL_ROOT_GLOBS:
+        for candidate in sorted(ROOT_DIR.glob(str(pattern.relative_to(ROOT_DIR)))):
+            resolved = candidate.expanduser()
+            if resolved in seen:
                 continue
-            epoch = epoch_dir.name.replace("epoch_", "")
-            if not epoch.isdigit():
+            seen.add(resolved)
+            primary_bundled_candidates.append(resolved)
+
+    for pattern in FALLBACK_BUNDLED_MODEL_ROOT_GLOBS:
+        for candidate in sorted(ROOT_DIR.glob(str(pattern.relative_to(ROOT_DIR)))):
+            resolved = candidate.expanduser()
+            if resolved in seen:
                 continue
-            model_dir = epoch_dir / "model"
-            if not model_dir.exists():
+            seen.add(resolved)
+            fallback_bundled_candidates.append(resolved)
+
+    valid_direct_roots = [root for root in direct_candidates if _looks_like_model_root(root)]
+    valid_primary_bundled_roots = [root for root in primary_bundled_candidates if _looks_like_model_root(root)]
+    valid_fallback_bundled_roots = [root for root in fallback_bundled_candidates if _looks_like_model_root(root)]
+
+    if valid_direct_roots:
+        return valid_direct_roots
+    if valid_primary_bundled_roots:
+        return valid_primary_bundled_roots
+    return valid_fallback_bundled_roots
+
+
+def discover_model_paths() -> dict[str, Path]:
+    discovered: dict[str, Path] = {}
+    for root in discover_model_roots():
+        for family_dir in root.iterdir():
+            if not family_dir.is_dir():
                 continue
-            model_id = f"{family}_epoch_{epoch}"
-            discovered.setdefault(model_id, model_dir)
+            family = family_dir.name
+            if family not in FINAL_FAMILIES:
+                continue
+            for epoch_dir in family_dir.iterdir():
+                if not epoch_dir.is_dir() or not epoch_dir.name.startswith("epoch_"):
+                    continue
+                epoch = epoch_dir.name.replace("epoch_", "")
+                if not epoch.isdigit():
+                    continue
+                model_dir = epoch_dir / "model"
+                if not model_dir.exists():
+                    continue
+                model_id = f"{family}_epoch_{epoch}"
+                discovered.setdefault(model_id, model_dir)
     return discovered
+
+
+def candidate_model_names(family: str, epoch: int) -> list[str]:
+    return [
+        f"{family}_epoch_{epoch}",
+        f"{family}_epoch{epoch}",
+    ]
 
 
 def build_model_registry() -> pd.DataFrame:
@@ -107,6 +179,7 @@ def build_model_registry() -> pd.DataFrame:
         if family not in FINAL_FAMILIES:
             continue
         epoch = int(epoch_text)
+        model_name_candidates = candidate_model_names(family, epoch)
         metrics_path = model_path.parent / "metrics.json"
         metrics = {}
         if metrics_path.exists():
@@ -115,8 +188,8 @@ def build_model_registry() -> pd.DataFrame:
         best_checkpoint = metrics.get("best_checkpoint")
 
         gold_row = (
-            gold_df[gold_df["model_name"] == model_id].iloc[0]
-            if not gold_df.empty and (gold_df["model_name"] == model_id).any()
+            gold_df[gold_df["model_name"].isin(model_name_candidates)].iloc[0]
+            if not gold_df.empty and gold_df["model_name"].isin(model_name_candidates).any()
             else None
         )
         weak_row = (
@@ -128,12 +201,7 @@ def build_model_registry() -> pd.DataFrame:
         rows.append(
             {
                 "model_id": model_id,
-                "display_name": (
-                    f"{DISPLAY_NAME_MAP.get(family, family.title())} "
-                    f"(run E{epoch}, best E{best_epoch})"
-                    if best_epoch is not None and int(best_epoch) != epoch
-                    else f"{DISPLAY_NAME_MAP.get(family, family.title())} E{epoch}"
-                ),
+                "display_name": f"{DISPLAY_NAME_MAP.get(family, family.title())} E{epoch}",
                 "family": family,
                 "epoch": epoch,
                 "best_epoch": int(best_epoch) if best_epoch is not None else None,

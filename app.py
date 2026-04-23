@@ -24,6 +24,7 @@ from src.dashboard.analytics import (
     ASPECT_ORDER,
     compute_kpis,
     hydrate_scope,
+    term_trend_frame,
     wide_review_frame,
 )
 from src.dashboard.aspect_taxonomy import (
@@ -199,6 +200,7 @@ h1, h2, h3 {
   border-radius: 18px !important;
   box-shadow: none;
   margin-bottom: 0.7rem;
+  overflow: hidden;
 }
 [data-testid="stExpander"] {
   background: rgba(253, 251, 246, 0.34);
@@ -786,10 +788,17 @@ h1, h2, h3 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.84rem;
+  align-items: stretch;
+  margin: 0;
+}
+.conclusion-grid-2 > * {
+  min-width: 0;
+  height: 100%;
 }
 .conclusion-grid-1 {
   display: grid;
   gap: 0.72rem;
+  margin: 0;
 }
 .conclusion-card {
   background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(252,248,241,0.92));
@@ -798,8 +807,10 @@ h1, h2, h3 {
   padding: 0.98rem 1.05rem;
   margin: 0;
   min-height: 204px;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 .conclusion-card-lead {
   border-top: 5px solid rgba(42, 47, 69, 0.28);
@@ -812,6 +823,10 @@ h1, h2, h3 {
 }
 .conclusion-card-close {
   border-top: 4px solid rgba(140, 143, 149, 0.72);
+}
+.conclusion-card-compact {
+  min-height: 196px;
+  padding: 0.92rem 1rem;
 }
 .conclusion-card-positive {
   border-top: 4px solid rgba(47, 127, 82, 0.7);
@@ -856,6 +871,25 @@ h1, h2, h3 {
   margin-top: auto;
   padding-top: 0.72rem;
 }
+.conclusion-card-compact .conclusion-evidence-row {
+  margin-top: 0.62rem;
+  padding-top: 0;
+}
+.conclusion-card-compact .conclusion-subline {
+  margin-top: 0.28rem;
+}
+.conclusion-card-compact .conclusion-lead,
+.conclusion-card-compact .conclusion-subline {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.conclusion-card-compact .conclusion-lead {
+  -webkit-line-clamp: 3;
+}
+.conclusion-card-compact .conclusion-subline {
+  -webkit-line-clamp: 2;
+}
 .conclusion-chip {
   display: inline-flex;
   align-items: center;
@@ -878,10 +912,17 @@ h1, h2, h3 {
   .scope-grid, .health-grid, .summary-grid, .example-grid {
     grid-template-columns: 1fr 1fr;
   }
+  .conclusion-grid-2 {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 760px) {
   .scope-grid, .health-grid, .summary-grid, .example-grid {
     grid-template-columns: 1fr;
+  }
+  .conclusion-card,
+  .conclusion-card-compact {
+    min-height: 0;
   }
   .health-row {
     grid-template-columns: 62px 1fr 38px;
@@ -922,7 +963,6 @@ def get_store() -> DashboardStore:
     return store
 
 
-@st.cache_data(show_spinner=False)
 def get_registry() -> pd.DataFrame:
     return build_model_registry()
 
@@ -1221,6 +1261,311 @@ def sentiment_word_frequencies(long_df: pd.DataFrame, sentiment: str, top_n: int
     if not words:
         return []
     return Counter(words).most_common(top_n)
+
+
+def sentiment_word_distribution(long_df: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
+    if long_df.empty:
+        return pd.DataFrame(columns=["word", "pred_label", "count", "total_count"])
+
+    frames: list[pd.DataFrame] = []
+    for sentiment in ["Positive", "Neutral", "Negative"]:
+        source = long_df[long_df["pred_label"] == sentiment].drop_duplicates(subset=["review_id_ext"])
+        words: list[str] = []
+        for text in source["review_text_clean"].fillna("").astype(str):
+            tokens = re.findall(r"[a-zA-Z][a-zA-Z0-9_-]{2,}", text.lower())
+            words.extend([token for token in tokens if token not in STOPWORDS])
+        if not words:
+            continue
+        counter = Counter(words)
+        frames.append(
+            pd.DataFrame(
+                {
+                    "word": list(counter.keys()),
+                    "pred_label": sentiment,
+                    "count": list(counter.values()),
+                }
+            )
+        )
+
+    if not frames:
+        return pd.DataFrame(columns=["word", "pred_label", "count", "total_count"])
+
+    combined = pd.concat(frames, ignore_index=True)
+    totals = (
+        combined.groupby("word", as_index=False)["count"]
+        .sum()
+        .rename(columns={"count": "total_count"})
+        .sort_values(["total_count", "word"], ascending=[False, True])
+    )
+    top_words = totals.head(top_n)["word"].tolist()
+    combined = combined[combined["word"].isin(top_words)].copy()
+    combined = combined.merge(totals, on="word", how="left")
+    combined["pred_label"] = pd.Categorical(
+        combined["pred_label"],
+        categories=["Negative", "Neutral", "Positive"],
+        ordered=True,
+    )
+    return combined.sort_values(["total_count", "pred_label"], ascending=[True, True]).reset_index(drop=True)
+
+
+def dominant_label_and_gap(counts: dict[str, float]) -> tuple[str, float, float]:
+    pairs = sorted(
+        ((str(label), float(value)) for label, value in counts.items()),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    if not pairs:
+        return "Neutral", 0.0, 0.0
+    label, top_value = pairs[0]
+    runner_up = pairs[1][1] if len(pairs) > 1 else 0.0
+    return label, top_value, top_value - runner_up
+
+
+def human_term_list(words: list[str]) -> str:
+    clean = [str(word).strip() for word in words if str(word).strip()]
+    if not clean:
+        return "-"
+    if len(clean) == 1:
+        return clean[0]
+    if len(clean) == 2:
+        return f"{clean[0]} dan {clean[1]}"
+    return f"{', '.join(clean[:-1])}, dan {clean[-1]}"
+
+
+def normalize_issue_text(text: object) -> str:
+    raw = str(text or "").strip()
+    if not raw:
+        return ""
+    raw = re.sub(r"\s*\(\d+%\)\s*$", "", raw).strip()
+    raw = raw.replace("Campuran; sinyal ", "").strip()
+    return raw
+
+
+def word_scope_sentiment(filtered: pd.DataFrame, selected_sentiment: str, top_word: str, top_n: int) -> dict[str, object]:
+    dedup = filtered.drop_duplicates(subset=["review_id_ext"]).copy()
+    overall_counts = (
+        dedup["pred_label"].value_counts(normalize=True).mul(100).round(1).to_dict()
+        if not dedup.empty and "pred_label" in dedup.columns
+        else {}
+    )
+    overall_label, overall_share, overall_gap = dominant_label_and_gap(overall_counts)
+
+    if selected_sentiment != "Semua":
+        return {
+            "label": selected_sentiment,
+            "share": 100.0,
+            "gap": 100.0,
+            "overall_label": overall_label,
+            "overall_share": overall_share,
+            "overall_gap": overall_gap,
+            "strong": True,
+            "mixed": False,
+        }
+
+    dist_df = sentiment_word_distribution(filtered, top_n=max(top_n, 10))
+    lead_df = dist_df[dist_df["word"] == top_word].copy()
+    lead_counts = (
+        lead_df.groupby("pred_label", observed=False)["count"].sum().to_dict()
+        if not lead_df.empty
+        else {}
+    )
+    label, share, gap = dominant_label_and_gap(lead_counts)
+    aligned_with_overall = label == overall_label or overall_share < 45.0
+    strong = share >= 60.0 and gap >= 10.0 and aligned_with_overall
+    mixed = share < 60.0 or gap < 10.0
+    return {
+        "label": label,
+        "share": share,
+        "gap": gap,
+        "overall_label": overall_label,
+        "overall_share": overall_share,
+        "overall_gap": overall_gap,
+        "strong": strong,
+        "mixed": mixed,
+    }
+
+
+def keyword_focus_aspect(filtered: pd.DataFrame, selected_aspect: str, sentiment_label: str) -> dict[str, object]:
+    if filtered.empty:
+        return {"aspect": None, "share": 0.0, "gap": 0.0, "selected": False, "strong": False}
+
+    score_df = aspect_score_table(filtered)
+    if score_df.empty:
+        chosen = selected_aspect.lower() if selected_aspect != "Semua" else None
+        return {"aspect": chosen, "share": 0.0, "gap": 0.0, "selected": selected_aspect != "Semua", "strong": False}
+
+    metric_map = {
+        "Negative": "negative_share",
+        "Positive": "positive_share",
+        "Neutral": "neutral_share",
+    }
+    metric = metric_map.get(sentiment_label, "negative_share")
+
+    if selected_aspect != "Semua":
+        target = selected_aspect.lower()
+        row = score_df[score_df["aspect"].astype(str) == target]
+        if row.empty:
+            return {"aspect": target, "share": 0.0, "gap": 0.0, "selected": True, "strong": False}
+        share = float(row.iloc[0][metric])
+        return {"aspect": target, "share": share, "gap": share, "selected": True, "strong": share >= 35.0}
+
+    if sentiment_label not in {"Negative", "Positive"}:
+        return {"aspect": None, "share": 0.0, "gap": 0.0, "selected": False, "strong": False}
+
+    aspect_volume = (
+        filtered.groupby("aspect")["review_id_ext"].nunique().to_dict()
+        if "review_id_ext" in filtered.columns
+        else filtered["aspect"].value_counts().to_dict()
+    )
+    ordered = score_df.assign(
+        volume=score_df["aspect"].astype(str).map(lambda aspect: int(aspect_volume.get(aspect, 0)))
+    ).sort_values([metric, "volume"], ascending=[False, False]).reset_index(drop=True)
+    top_row = ordered.iloc[0]
+    runner_up = float(ordered.iloc[1][metric]) if len(ordered) > 1 else 0.0
+    top_share = float(top_row[metric])
+    return {
+        "aspect": str(top_row["aspect"]),
+        "share": top_share,
+        "gap": top_share - runner_up,
+        "selected": False,
+        "strong": top_share >= 45.0 and (len(ordered) == 1 or (top_share - runner_up) >= 5.0),
+    }
+
+
+def keyword_insight_cards_html(
+    filtered: pd.DataFrame,
+    *,
+    selected_sentiment: str,
+    selected_aspect: str,
+    selected_app: str,
+    top_n: int,
+    freq_pairs: list[tuple[str, int]],
+    review_count: int,
+) -> str:
+    if not freq_pairs:
+        return ""
+
+    top_terms = [word for word, _ in freq_pairs[:3]]
+    top_word, top_count = freq_pairs[0]
+    second_count = freq_pairs[1][1] if len(freq_pairs) > 1 else 0
+    lead_is_clear = top_count >= 8 and (second_count == 0 or top_count >= second_count + 5)
+
+    sentiment_meta = word_scope_sentiment(filtered, selected_sentiment, top_word, top_n)
+    sentiment_label = str(sentiment_meta["label"])
+    aspect_meta = keyword_focus_aspect(filtered, selected_aspect, sentiment_label)
+    focus_aspect = aspect_meta["aspect"]
+    aspect_name = aspect_display_name(focus_aspect) if focus_aspect else "area tertentu"
+
+    scope_label = "scope aktif" if selected_app == "Combined" else selected_app
+    issue_text = ""
+    trend_text = ""
+    if focus_aspect and sentiment_label == "Negative":
+        issue_text = normalize_issue_text(top_issue_for_aspect(filtered, str(focus_aspect)))
+        trend_text = aspect_trend_signal(filtered, str(focus_aspect))
+
+    issue_specific = bool(issue_text) and issue_text not in {"Belum ada pola kuat", "Belum cukup spesifik"}
+    strong_read = (
+        review_count >= 50
+        and lead_is_clear
+        and bool(sentiment_meta.get("strong"))
+        and bool(aspect_meta.get("strong"))
+    )
+    low_data = review_count < 20
+    mixed_read = bool(sentiment_meta.get("mixed")) or sentiment_label == "Neutral"
+
+    if low_data:
+        user_body = (
+            f"Data pada {scope_label} masih terbatas. Kata yang paling sering muncul saat ini adalah "
+            f"{human_term_list(top_terms)}, jadi bagian ini lebih aman dibaca sebagai sinyal awal."
+        )
+        dev_body = (
+            "Belum aman menjadikan blok ini sebagai dasar keputusan tunggal. "
+            "Gunakan kata dominan sebagai petunjuk awal, lalu konfirmasi lagi di Issue Map dan Trend."
+        )
+        user_tone = dev_tone = "neutral"
+    elif sentiment_label == "Negative":
+        if strong_read and issue_specific:
+            user_body = (
+                f"Di {scope_label}, pengguna paling sering mengeluhkan {human_term_list(top_terms)}. "
+                f"Ini mengarah ke gangguan pada aspek {aspect_name}, terutama terkait {issue_text.lower()}."
+            )
+            dev_body = (
+                f"Prioritas tim sebaiknya mulai dari aspek {aspect_name}, khususnya {issue_text.lower()}. "
+                f"Gunakan kata {human_term_list(top_terms[:2])} sebagai petunjuk audit alur, status, dan titik proses yang paling sering memicu keluhan."
+            )
+            if trend_text.startswith("Cenderung naik"):
+                dev_body += " Tekanannya juga sedang naik, jadi layak dinaikkan prioritasnya."
+        elif focus_aspect:
+            user_body = (
+                f"Di {scope_label}, kata seperti {human_term_list(top_terms)} lebih sering muncul dalam keluhan. "
+                f"Sinyalnya paling dekat dengan aspek {aspect_name}, meski isu utamanya belum benar-benar tunggal."
+            )
+            dev_body = (
+                f"Gunakan blok ini sebagai radar untuk aspek {aspect_name}. "
+                "Belum cukup aman menyimpulkan satu akar masalah, jadi bacalah bersama Issue Map sebelum menetapkan prioritas."
+            )
+        else:
+            user_body = (
+                f"Di {scope_label}, kata seperti {human_term_list(top_terms)} lebih sering muncul dalam keluhan. "
+                "Ini memberi sinyal ada titik pengalaman yang cukup sering mengganggu, tetapi temanya masih tersebar."
+            )
+            dev_body = (
+                "Keluhan sudah terlihat, tetapi fokus aspeknya belum cukup bersih. "
+                "Jangan tarik kesimpulan tunggal dulu; pakai blok ini untuk menentukan area investigasi awal."
+            )
+        user_tone = dev_tone = "negative"
+    elif sentiment_label == "Positive":
+        if strong_read and focus_aspect:
+            user_body = (
+                f"Di {scope_label}, kata seperti {human_term_list(top_terms)} lebih sering muncul dalam konteks positif. "
+                f"Ini menunjukkan pengalaman yang paling terasa membantu ada pada aspek {aspect_name}."
+            )
+            dev_body = (
+                f"Aspek {aspect_name} saat ini paling sering mendapat sinyal positif. "
+                "Fokus tim adalah menjaga kestabilan area ini agar kekuatan yang sudah terasa tidak ikut turun."
+            )
+        else:
+            user_body = (
+                f"Di {scope_label}, kata seperti {human_term_list(top_terms)} paling sering muncul dalam pujian. "
+                "Ini memberi sinyal ada nilai yang dianggap membantu, meski belum terkonsentrasi pada satu tema yang sangat kuat."
+            )
+            dev_body = (
+                "Ada sinyal positif yang cukup konsisten, tetapi belum cukup tajam untuk dijadikan fokus tunggal. "
+                "Lebih aman memakainya sebagai area yang perlu dijaga sambil memantau perubahan di section Trend."
+            )
+        user_tone = dev_tone = "positive"
+    else:
+        if selected_sentiment == "Semua" and strong_read and focus_aspect:
+            sentiment_word = {
+                "Negative": "keluhan",
+                "Positive": "pujian",
+            }.get(sentiment_label, "komentar")
+            user_body = (
+                f"Dalam percakapan di {scope_label}, kata seperti {human_term_list(top_terms)} lebih sering muncul bersama {sentiment_word}. "
+                f"Ini mengarah ke aspek {aspect_name}, tetapi tetap perlu dibaca bersama section lain."
+            )
+            dev_body = (
+                f"Topik {human_term_list(top_terms)} sedang paling ramai dibicarakan dan paling dekat dengan aspek {aspect_name}. "
+                "Gunakan ini sebagai sinyal fokus cepat, bukan sebagai pengganti summary utama."
+            )
+        else:
+            user_body = (
+                f"Di {scope_label}, kata yang paling sering muncul adalah {human_term_list(top_terms)}. "
+                "Nadanya masih campuran, jadi bagian ini lebih cocok dibaca sebagai topik yang ramai dibicarakan."
+            )
+            dev_body = (
+                "Percakapan sedang terkonsentrasi pada topik tertentu, tetapi sinyalnya belum cukup tegas. "
+                "Gunakan blok ini sebagai radar monitoring, bukan dasar prioritas tunggal."
+            )
+        user_tone = dev_tone = "neutral"
+
+    wrapper = (
+        '<div class="conclusion-grid-2">'
+        f'{conclusion_card_html("Untuk Pengguna", user_body, user_tone, "app")}'
+        f'{conclusion_card_html("Untuk Pengembang", dev_body, dev_tone, "app")}'
+        '</div>'
+    )
+    return wrapper
 
 
 def render_sentiment_wordcloud(long_df: pd.DataFrame, sentiment: str) -> None:
@@ -1715,6 +2060,163 @@ def top_issue_for_aspect(long_df: pd.DataFrame, aspect: str) -> str:
     return f"{top['issue']} ({top['share']:.0f}%)"
 
 
+def aspect_user_impact_hint(aspect: str) -> str:
+    return {
+        "risk": "akses limit, approval, pencairan, atau beban pembiayaan",
+        "trust": "kejelasan status, alasan keputusan, dan rasa aman terhadap layanan",
+        "service": "kelancaran penggunaan aplikasi dan bantuan saat ada kendala",
+    }.get(aspect, "pengalaman penggunaan harian")
+
+
+def aspect_dev_focus_hint(aspect: str) -> str:
+    return {
+        "risk": "aturan limit, alur approval, pencairan, dan struktur biaya",
+        "trust": "transparansi status, penjelasan keputusan, dan komunikasi pengguna",
+        "service": "stabilitas alur aplikasi, respons bantuan, dan penanganan keluhan",
+    }.get(aspect, "alur produk yang paling sering memicu keluhan")
+
+
+def summary_issue_map_cards_html(long_df: pd.DataFrame, score_df: pd.DataFrame) -> str:
+    if long_df.empty or score_df.empty:
+        return ""
+
+    score_view = score_df.copy()
+    score_view["aspect"] = score_view["aspect"].astype(str)
+    score_view = score_view[score_view["aspect"].isin(["risk", "trust", "service"])].copy()
+    if score_view.empty:
+        return ""
+
+    ranked = score_view.sort_values(
+        ["negative_share", "dominant_share", "positive_share"],
+        ascending=[False, False, False],
+    ).reset_index(drop=True)
+    focus_row = ranked.iloc[0]
+    focus_aspect = str(focus_row["aspect"])
+    focus_name = ASPECT_LABEL_MAP.get(focus_aspect, focus_aspect.title())
+    focus_negative = int(focus_row["negative_share"])
+    runner_up_negative = int(ranked.iloc[1]["negative_share"]) if len(ranked) > 1 else 0
+    focus_gap = focus_negative - runner_up_negative
+
+    issue_df = issue_breakdown(long_df, focus_aspect)
+    total_negative = int(issue_df["count"].sum()) if not issue_df.empty else 0
+    specific_df = issue_df[issue_df["issue"] != GENERAL_ISSUE_LABEL].copy() if not issue_df.empty else pd.DataFrame()
+    specific_total = int(specific_df["count"].sum()) if not specific_df.empty else 0
+    specific_coverage = (specific_total / total_negative * 100.0) if total_negative else 0.0
+
+    primary_row = None
+    if not specific_df.empty:
+        primary_row = specific_df.iloc[0]
+    elif not issue_df.empty:
+        primary_row = issue_df.iloc[0]
+
+    primary_issue = ""
+    primary_share = 0.0
+    dominant_app = ""
+    if primary_row is not None:
+        raw_issue = str(primary_row.get("issue", "")).strip()
+        if raw_issue and raw_issue != GENERAL_ISSUE_LABEL:
+            primary_issue = raw_issue
+            primary_share = float(primary_row.get("share", 0.0))
+        dominant_app = str(primary_row.get("dominant_app", "")).strip()
+
+    issue_specific = bool(primary_issue) and primary_share >= 20.0
+    aspect_strong = focus_negative >= 50 and focus_gap >= 5
+    issue_scattered = not issue_specific or specific_coverage < 45.0
+    unique_reviews = int(long_df["review_id_ext"].nunique()) if "review_id_ext" in long_df.columns else int(len(long_df))
+    low_data = unique_reviews < 20 or total_negative < 6
+
+    app_names = long_df["app_name"].dropna().astype(str).unique().tolist() if "app_name" in long_df.columns else []
+    app_note = ""
+    if dominant_app and dominant_app != "-" and len(app_names) > 1:
+        app_note = f" Sinyal ini paling sering muncul di {dominant_app}."
+
+    trend_note = ""
+    trend_signal = aspect_trend_signal(long_df, focus_aspect)
+    if trend_signal.startswith("Cenderung naik"):
+        trend_note = " Tekanannya juga sedang naik, jadi layak dinaikkan prioritasnya."
+    elif trend_signal.startswith("Cenderung turun"):
+        trend_note = " Tekanannya mulai turun, tetapi area ini masih perlu dijaga."
+
+    if low_data:
+        user_body = (
+            f"Keluhan mulai mengarah ke aspek {focus_name}. "
+            "Tapi datanya belum cukup padat, jadi ini lebih aman dibaca sebagai tanda awal."
+        )
+        dev_body = (
+            f"Aspek {focus_name} sudah layak dipantau lebih dulu. "
+            "Namun datanya belum cukup kuat untuk langsung dijadikan fokus utama."
+        )
+        user_tone = dev_tone = "neutral"
+    elif aspect_strong and issue_specific and not issue_scattered:
+        user_body = (
+            f"Keluhan paling terasa sekarang ada di aspek {focus_name}, terutama soal {primary_issue.lower()}. "
+            f"Bagi pengguna, masalah paling sering muncul saat menyentuh {aspect_user_impact_hint(focus_aspect)}."
+        )
+        dev_body = (
+            f"Fokus perbaikan paling dekat ada di aspek {focus_name}, mulai dari {primary_issue.lower()}. "
+            f"Tim bisa mulai cek {aspect_dev_focus_hint(focus_aspect)}.{app_note}{trend_note}"
+        )
+        user_tone = dev_tone = "negative"
+    elif issue_specific:
+        user_body = (
+            f"Keluhan paling menonjol masih mengarah ke aspek {focus_name}, terutama soal {primary_issue.lower()}. "
+            "Namun jaraknya dengan area lain belum terlalu jauh."
+        )
+        dev_body = (
+            f"Aspek {focus_name} layak jadi prioritas awal karena issue map paling sering menunjuk ke {primary_issue.lower()}. "
+            f"Tapi tekanannya belum sepenuhnya tunggal, jadi area lain tetap perlu dipantau saat tim mengecek {aspect_dev_focus_hint(focus_aspect)}.{app_note}"
+        )
+        user_tone = dev_tone = "neutral"
+    else:
+        user_body = (
+            f"Keluhan paling banyak masih terkumpul di aspek {focus_name}. "
+            f"Artinya masalah paling sering masih ada di area {aspect_user_impact_hint(focus_aspect)}, walau bentuk keluhannya masih menyebar."
+        )
+        dev_body = (
+            f"Aspek {focus_name} tetap layak jadi fokus awal, tetapi issue map menunjukkan keluhan masih tersebar. "
+            f"Lebih aman mulai dari 2-3 issue teratas di area {aspect_dev_focus_hint(focus_aspect)}, bukan langsung mengunci satu penyebab.{app_note}"
+        )
+        user_tone = dev_tone = "neutral"
+
+    user_metrics: dict[str, object] = {
+        "worst_aspect": focus_aspect,
+        "negative_share": float(focus_negative),
+        "aspect": focus_aspect,
+    }
+    dev_metrics: dict[str, object] = {
+        "worst_aspect": focus_aspect,
+        "negative_share": float(focus_negative),
+        "aspect": focus_aspect,
+    }
+    if issue_specific:
+        user_metrics["issue"] = primary_issue
+        dev_metrics["issue"] = primary_issue
+    if dominant_app and dominant_app != "-":
+        dev_metrics["app_name"] = dominant_app
+    if trend_signal not in {"Trend belum tersedia.", "Trend belum cukup panjang."}:
+        dev_metrics["trend"] = trend_signal
+
+    user_card = {
+        "title": "Untuk Pengguna",
+        "tone": user_tone,
+        "body": user_body,
+        "metrics": user_metrics,
+    }
+    dev_card = {
+        "title": "Untuk Pengembang",
+        "tone": dev_tone,
+        "body": dev_body,
+        "metrics": dev_metrics,
+    }
+
+    return (
+        '<div class="conclusion-grid-2">'
+        f'{render_compact_summary_card(user_card, "Untuk Pengguna", user_tone, "compact")}'
+        f'{render_compact_summary_card(dev_card, "Untuk Pengembang", dev_tone, "compact")}'
+        '</div>'
+    )
+
+
 def aspect_diagnosis_table(
     long_df: pd.DataFrame,
     score_df: pd.DataFrame,
@@ -1849,6 +2351,292 @@ def render_diagnosis_examples(long_df: pd.DataFrame, aspect: str) -> None:
             )
 
 
+def render_word_cloud_section(long_df: pd.DataFrame) -> None:
+    """Render the word cloud / top-words section for Page 1."""
+    st.markdown("### Kata yang Paling Sering Muncul")
+    st.caption(
+        "Ukuran kata mencerminkan frekuensi kemunculan dalam ulasan. "
+        "Gunakan filter untuk menjelajahi pola per sentimen atau aspek."
+    )
+    st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
+
+    required_cols = {"review_id_ext", "app_name", "aspect", "review_text_clean", "pred_label"}
+    if long_df.empty or not required_cols.issubset(long_df.columns):
+        st.info("Belum ada data untuk ditampilkan.")
+        return
+
+    import importlib.util
+
+    use_wordcloud = importlib.util.find_spec("wordcloud") is not None
+
+    # ── Controls ───────────────────────────────────────────────────────────
+    c_sent, c_asp, c_app, c_topn = st.columns([1.2, 1.2, 1.2, 1.4])
+    with c_sent:
+        wc_sentiment = st.selectbox(
+            "Sentimen",
+            ["Semua", "Positive", "Neutral", "Negative"],
+            key="wc_sentiment",
+        )
+    with c_asp:
+        wc_aspect = st.selectbox(
+            "Aspek",
+            ["Semua", "Risk", "Trust", "Service"],
+            key="wc_aspect",
+        )
+    with c_app:
+        available_apps = sorted(long_df["app_name"].dropna().unique().tolist())
+        wc_app = st.selectbox(
+            "App",
+            ["Combined"] + available_apps,
+            key="wc_app",
+        )
+    with c_topn:
+        wc_topn = st.slider("Top kata", 10, 50, 10, step=5, key="wc_topn")
+
+    # ── Apply filters ──────────────────────────────────────────────────────
+    filtered = long_df.copy()
+    if wc_aspect != "Semua":
+        filtered = filtered[filtered["aspect"] == wc_aspect.lower()]
+    if wc_app != "Combined":
+        filtered = filtered[filtered["app_name"] == wc_app]
+
+    if filtered.empty:
+        st.info("Tidak ada data untuk kombinasi filter ini.")
+        return
+
+    review_count = int(filtered["review_id_ext"].nunique())
+    if review_count < 20:
+        st.warning(
+            f"Hanya {review_count} ulasan unik tersedia. "
+            "Word cloud lebih bermakna dengan minimal 20 ulasan."
+        )
+
+    # ── Compute frequencies once ───────────────────────────────────────────
+    freq_pairs = sentiment_word_frequencies(filtered, wc_sentiment, top_n=wc_topn)
+
+    # ── Render tabs ────────────────────────────────────────────────────────
+    tab_wc, tab_bar = st.tabs(["\u2601\ufe0f Word Cloud", "\U0001f4ca Top Kata"])
+
+    with tab_wc:
+        if not freq_pairs:
+            st.info("Belum ada data kata yang cukup untuk filter ini.")
+        elif use_wordcloud:
+            from PIL import Image
+            from wordcloud import WordCloud
+
+            colormap_map = {
+                "Semua": "viridis",
+                "Positive": "Greens",
+                "Negative": "Reds",
+                "Neutral": "Blues",
+            }
+            cloud = WordCloud(
+                width=1200,
+                height=500,
+                background_color="white",
+                colormap=colormap_map.get(wc_sentiment, "viridis"),
+                max_words=wc_topn,
+                collocations=False,
+                min_font_size=10,
+                prefer_horizontal=0.85,
+            ).generate_from_frequencies(dict(freq_pairs))
+            img = cloud.to_image()
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            buf.seek(0)
+            st.image(Image.open(buf), use_container_width=True)
+        else:
+            st.info(
+                "Library `wordcloud` belum terpasang. "
+                "Jalankan `pip install wordcloud` lalu restart. "
+                "Tab **\U0001f4ca Top Kata** tersedia sebagai alternatif."
+            )
+
+    with tab_bar:
+        if not freq_pairs:
+            st.info("Belum ada data kata untuk filter ini.")
+        else:
+            if wc_sentiment == "Semua":
+                dist_df = sentiment_word_distribution(filtered, top_n=wc_topn)
+                if dist_df.empty:
+                    st.info("Belum ada data kata untuk filter ini.")
+                else:
+                    fig_wc_bar = px.bar(
+                        dist_df,
+                        x="count",
+                        y="word",
+                        color="pred_label",
+                        orientation="h",
+                        title=f"Top {wc_topn} kata paling sering muncul",
+                        category_orders={"pred_label": ["Negative", "Neutral", "Positive"]},
+                        color_discrete_map=SENTIMENT_COLOR_MAP,
+                    )
+                    fig_wc_bar.update_layout(
+                        barmode="stack",
+                        yaxis_title=None,
+                        xaxis_title="Frekuensi kemunculan",
+                        margin=dict(l=0, r=20, t=30, b=0),
+                        legend_title_text="Sentimen",
+                    )
+                    st.plotly_chart(chart_theme(fig_wc_bar), use_container_width=True)
+            else:
+                freq_df = pd.DataFrame(freq_pairs, columns=["word", "count"])
+                display_n = min(wc_topn, len(freq_df))
+                fig_wc_bar = px.bar(
+                    freq_df.head(display_n).sort_values("count", ascending=True),
+                    x="count",
+                    y="word",
+                    orientation="h",
+                    title=f"Top {display_n} kata paling sering muncul",
+                    color_discrete_sequence=["#4f6b8f"],
+                )
+                fig_wc_bar.update_layout(
+                    yaxis_title=None,
+                    xaxis_title="Frekuensi kemunculan",
+                    margin=dict(l=0, r=20, t=30, b=0),
+                )
+                st.plotly_chart(chart_theme(fig_wc_bar), use_container_width=True)
+
+    # ── Insight strip ──────────────────────────────────────────────────────
+    if freq_pairs:
+        top3_parts = " · ".join(f"**{w}** ({c:,}\u00d7)" for w, c in freq_pairs[:3])
+        st.caption(
+            f"Top 3 kata \u2014 {top3_parts}  \u2022  {review_count:,} ulasan unik pada filter aktif"
+        )
+
+def render_term_trend_section(long_df: pd.DataFrame, duration_days: int) -> None:
+    """Render the term frequency trend chart inside the Trend Utama tab."""
+    required_cols = {"review_id_ext", "review_date", "review_text_clean"}
+    if long_df.empty or not required_cols.issubset(long_df.columns):
+        st.info("Belum ada data untuk ditampilkan.")
+        return
+
+    long_df = long_df.copy()
+    long_df["review_date"] = pd.to_datetime(long_df["review_date"], errors="coerce")
+    long_df = long_df.dropna(subset=["review_date"])
+    if long_df.empty:
+        st.info("Belum ada data tanggal yang valid untuk membuat trend.")
+        return
+
+    if duration_days < 7:
+        st.info(
+            f"Data range terlalu pendek ({duration_days} hari). "
+            "Term trend memerlukan minimal 7 hari. "
+            "Coba fetch scope yang lebih lebar."
+        )
+        return
+
+    # ── Auto-suggest top kata dari scope aktif ─────────────────────────────
+    src_dedup = long_df.drop_duplicates("review_id_ext")
+    sugg_df = word_frequency_frame(src_dedup, top_n=30)
+    suggestions = sugg_df["word"].tolist() if not sugg_df.empty else []
+
+    # ── Controls ───────────────────────────────────────────────────────────
+    ctrl_l, ctrl_r = st.columns([2.5, 1.4], gap="large")
+    with ctrl_l:
+        st.markdown("##### Pilih kata untuk dilacak")
+        selected_terms = st.multiselect(
+            "Pilih kata untuk dilacak",
+            options=suggestions,
+            default=suggestions[:3] if len(suggestions) >= 3 else suggestions,
+            max_selections=5,
+            key="tt_terms",
+            label_visibility="collapsed",
+        )
+        st.caption("Maksimal 5 kata. Ketik untuk mencari kata lain.")
+    with ctrl_r:
+        st.markdown("##### Granularity")
+        if duration_days <= 21:
+            default_freq_idx = 0
+        elif duration_days <= 90:
+            default_freq_idx = 1
+        else:
+            default_freq_idx = 2
+        tt_freq_label = st.radio(
+            "Granularity",
+            ["Harian", "Mingguan", "Bulanan"],
+            index=default_freq_idx,
+            horizontal=True,
+            key="tt_freq",
+            label_visibility="collapsed",
+        )
+
+    freq_map = {"Harian": "D", "Mingguan": "W", "Bulanan": "M"}
+
+    if not selected_terms:
+        st.info("Pilih minimal satu kata di atas untuk melihat trend-nya.")
+        return
+
+    trend_df = term_trend_frame(long_df, terms=selected_terms, freq=freq_map[tt_freq_label])
+    if trend_df.empty:
+        st.info("Tidak ada data kemunculan untuk kata yang dipilih.")
+        return
+
+    # ── Plot ───────────────────────────────────────────────────────────────
+    _TERM_COLORS = ["#4f6b8f", "#b44e34", "#2f7f52", "#1b7286", "#8b6d4f"]
+    fig_term = go.Figure()
+    for i, term in enumerate(selected_terms):
+        term_data = trend_df[trend_df["term"] == term].copy()
+        if term_data.empty:
+            continue
+        color = _TERM_COLORS[i % len(_TERM_COLORS)]
+        fig_term.add_trace(
+            go.Scatter(
+                x=term_data["period"],
+                y=term_data["count"],
+                mode="lines+markers",
+                name=term,
+                line=dict(color=color, width=2.5, shape="spline", smoothing=0.8),
+                marker=dict(size=5, color=color),
+                hovertemplate=(
+                    "<b>%{fullData.name}</b><br>"
+                    "Periode: %{x|%d %b %Y}<br>"
+                    "Ulasan: %{y}"
+                    "<extra></extra>"
+                ),
+            )
+        )
+
+    st.markdown(f"#### Frekuensi kata kunci per {tt_freq_label.lower()}")
+    st.caption("Jumlah ulasan yang menyebut tiap kata pada periode aktif.")
+
+    fig_term = chart_theme(fig_term)
+    fig_term.update_layout(
+        xaxis_title=None,
+        yaxis_title="Jumlah ulasan",
+        hovermode="x unified",
+        margin=dict(l=20, r=20, t=12, b=72),
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.18,
+            xanchor="left",
+            x=0,
+        ),
+    )
+    st.plotly_chart(fig_term, use_container_width=True)
+
+    # ── Spike annotations ──────────────────────────────────────────────────
+    for term in selected_terms:
+        term_data = trend_df[trend_df["term"] == term].copy()
+        if len(term_data) < 4:
+            continue
+        mean_val = float(term_data["count"].mean())
+        std_val = float(term_data["count"].std())
+        if std_val == 0 or mean_val == 0:
+            continue
+        spikes = term_data[term_data["count"] > mean_val + 2.0 * std_val]
+        if not spikes.empty:
+            spike_row = spikes.sort_values("count", ascending=False).iloc[0]
+            pct_above = (spike_row["count"] - mean_val) / mean_val * 100.0
+            st.caption(
+                f"\U0001f514 Lonjakan **'{term}'** pada "
+                f"{spike_row['period'].strftime('%d %b %Y')}: "
+                f"{int(spike_row['count'])} ulasan "
+                f"(+{pct_above:.0f}% di atas rata-rata {mean_val:.1f})"
+            )
+
+
 def conclusion_card_html(title: str, body: str, tone: str, variant: str = "default") -> str:
     return (
         f'<div class="conclusion-card conclusion-card-{tone} conclusion-card-{variant}">'
@@ -1856,6 +2644,15 @@ def conclusion_card_html(title: str, body: str, tone: str, variant: str = "defau
         f'<div class="conclusion-copy">{html.escape(body)}</div>'
         f'</div>'
     )
+
+
+def conclusion_grid_html(cards: list[str]) -> str:
+    rendered = [str(card) for card in cards if str(card).strip()]
+    if not rendered:
+        return ""
+    if len(rendered) == 1:
+        return f'<div class="conclusion-grid-1">{"".join(rendered)}</div>'
+    return f'<div class="conclusion-grid-2">{"".join(rendered[:2])}</div>'
 
 
 def split_summary_sentences(text: object, limit: int = 2) -> list[str]:
@@ -2870,6 +3667,9 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
                 render_diagnosis_examples(long_df, aspect)
 
     with st.container(border=True):
+        render_word_cloud_section(long_df)
+
+    with st.container(border=True):
         st.markdown("### Issue Map per Aspek")
         st.caption("Layer bantu baca review negatif. Ini interpretasi rule-based dengan aspect presence filtering, bukan label gold baru.")
         st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
@@ -2889,30 +3689,44 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
 
     with st.container(border=True):
         st.markdown("### Trend Utama")
-        st.caption("Satu visual utama untuk memahami apakah komposisi sentimen membaik, stabil, atau memburuk.")
-        daily_sent = (
-            long_df.groupby([long_df["review_date"].dt.date, "pred_label"], as_index=False)
-            .size()
-            .rename(columns={"review_date": "date", "size": "count"})
+        st.caption(
+            "Trend komposisi sentimen harian dan perubahan frekuensi "
+            "kata kunci dari waktu ke waktu."
         )
-        if not daily_sent.empty:
-            daily_sent["date"] = pd.to_datetime(daily_sent["date"])
-            daily_sent["share"] = daily_sent.groupby("date")["count"].transform(
-                lambda s: (s / s.sum() * 100.0).round(2)
+        tab_sent_trend, tab_term_trend = st.tabs(
+            ["\U0001f4c8 Komposisi Sentimen", "\U0001f524 Trend Kata Kunci"]
+        )
+
+        with tab_sent_trend:
+            trend_source = long_df.copy()
+            trend_source["review_date"] = pd.to_datetime(trend_source["review_date"], errors="coerce")
+            trend_source = trend_source.dropna(subset=["review_date", "pred_label"])
+            daily_sent = (
+                trend_source.groupby([trend_source["review_date"].dt.date, "pred_label"], as_index=False)
+                .size()
+                .rename(columns={"review_date": "date", "size": "count"})
             )
-            fig_mix = px.area(
-                daily_sent,
-                x="date",
-                y="share",
-                color="pred_label",
-                category_orders={"pred_label": ["Negative", "Neutral", "Positive"]},
-                color_discrete_map=SENTIMENT_COLOR_MAP,
-                title="Komposisi sentimen harian (%)",
-            )
-            fig_mix.update_yaxes(range=[0, 100], ticksuffix="%")
-            st.plotly_chart(chart_theme(fig_mix), use_container_width=True)
-        else:
-            st.info("Belum ada data trend harian.")
+            if not daily_sent.empty:
+                daily_sent["date"] = pd.to_datetime(daily_sent["date"])
+                daily_sent["share"] = daily_sent.groupby("date")["count"].transform(
+                    lambda s: (s / s.sum() * 100.0).round(2)
+                )
+                fig_mix = px.area(
+                    daily_sent,
+                    x="date",
+                    y="share",
+                    color="pred_label",
+                    category_orders={"pred_label": ["Negative", "Neutral", "Positive"]},
+                    color_discrete_map=SENTIMENT_COLOR_MAP,
+                    title="Komposisi sentimen harian (%)",
+                )
+                fig_mix.update_yaxes(range=[0, 100], ticksuffix="%")
+                st.plotly_chart(chart_theme(fig_mix), use_container_width=True)
+            else:
+                st.info("Belum ada data trend harian.")
+
+        with tab_term_trend:
+            render_term_trend_section(long_df, duration_days)
 
     with st.container(border=True):
         st.markdown("### Summary Kesimpulan")
@@ -2921,30 +3735,21 @@ def render_all_in_one_page(store: DashboardStore, registry_df: pd.DataFrame) -> 
         conclusion_payload = build_summary_conclusion_payload(long_df, score_df)
         st.markdown(str(conclusion_payload["overall"]), unsafe_allow_html=True)
         app_cards = conclusion_payload.get("apps", [])
-        if len(app_cards) >= 2:
+        if app_cards:
             st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
-            col_left, col_right = st.columns(2, gap="medium")
-            with col_left:
-                st.markdown(str(app_cards[0]), unsafe_allow_html=True)
-            with col_right:
-                st.markdown(str(app_cards[1]), unsafe_allow_html=True)
-        elif len(app_cards) == 1:
-            st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
-            st.markdown(str(app_cards[0]), unsafe_allow_html=True)
+            st.markdown(conclusion_grid_html(app_cards[:2]), unsafe_allow_html=True)
         signal_html = conclusion_payload.get("signal")
         meaning_html = conclusion_payload.get("meaning")
         if signal_html or meaning_html:
             st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
-            if signal_html and meaning_html:
-                col_left, col_right = st.columns(2, gap="medium")
-                with col_left:
-                    st.markdown(str(signal_html), unsafe_allow_html=True)
-                with col_right:
-                    st.markdown(str(meaning_html), unsafe_allow_html=True)
-            elif signal_html:
-                st.markdown(str(signal_html), unsafe_allow_html=True)
-            elif meaning_html:
-                st.markdown(str(meaning_html), unsafe_allow_html=True)
+            st.markdown(
+                conclusion_grid_html([str(signal_html or ""), str(meaning_html or "")]),
+                unsafe_allow_html=True,
+            )
+        audience_cards_html = summary_issue_map_cards_html(long_df, score_df)
+        if audience_cards_html:
+            st.markdown('<div class="section-spacer-sm"></div>', unsafe_allow_html=True)
+            st.markdown(audience_cards_html, unsafe_allow_html=True)
 
     st.caption("Page 1 sekarang fokus ke distribusi sentimen per aspek, diagnosis yang bisa dibuka-tutup, trend utama, dan kesimpulan ringkas di bagian akhir.")
 

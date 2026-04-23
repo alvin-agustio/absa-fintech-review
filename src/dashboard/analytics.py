@@ -8,6 +8,7 @@ from typing import Iterable
 
 import numpy as np
 import pandas as pd
+import re
 
 
 ASPECT_ORDER = ["service", "trust", "risk"]
@@ -179,6 +180,72 @@ def trend_frame(long_df: pd.DataFrame, freq: str = "D") -> pd.DataFrame:
     )
     trend["aspect"] = pd.Categorical(trend["aspect"], categories=ASPECT_ORDER, ordered=True)
     return trend.sort_values(["period", "aspect"]).reset_index(drop=True)
+
+
+def term_trend_frame(
+    long_df: pd.DataFrame,
+    terms: list[str],
+    freq: str = "W",
+) -> pd.DataFrame:
+    """Compute per-period mention count for selected terms.
+
+    Each period value is the number of *unique reviews* (deduplicated by
+    ``review_id_ext``) that contain at least one whole-word match of the
+    term in ``review_text_clean``.
+
+    Args:
+        long_df: Long-form prediction frame with ``review_id_ext``,
+                 ``review_date``, and ``review_text_clean`` columns.
+        terms:   Terms to track (case-insensitive, whole-word match).
+        freq:    Pandas period frequency — ``'D'`` (daily), ``'W'`` (weekly),
+                 or ``'M'`` (monthly).
+
+    Returns:
+        DataFrame with columns ``period``, ``term``, and ``count``.
+    """
+    required_cols = {"review_id_ext", "review_date", "review_text_clean"}
+    if long_df.empty or not terms or not required_cols.issubset(long_df.columns):
+        return pd.DataFrame(columns=["period", "term", "count"])
+
+    reviews = (
+        long_df[["review_id_ext", "review_date", "review_text_clean"]]
+        .drop_duplicates("review_id_ext")
+        .copy()
+    )
+    reviews["review_date"] = pd.to_datetime(reviews["review_date"], errors="coerce")
+    reviews = reviews.dropna(subset=["review_date"])
+    reviews["text_lower"] = reviews["review_text_clean"].fillna("").astype(str).str.lower()
+    reviews["period"] = reviews["review_date"].dt.to_period(freq).dt.to_timestamp()
+
+    if reviews.empty:
+        return pd.DataFrame(columns=["period", "term", "count"])
+
+    rows: list[pd.DataFrame] = []
+    for term in terms:
+        normalized_term = str(term).strip().lower()
+        if not normalized_term:
+            continue
+        pattern = r"\b" + re.escape(normalized_term) + r"\b"
+        mask = reviews["text_lower"].str.contains(pattern, regex=True, na=False)
+        counts = (
+            reviews.loc[mask]
+            .groupby("period", as_index=False)
+            .size()
+            .rename(columns={"size": "count"})
+        )
+        if counts.empty:
+            continue
+        counts["term"] = term
+        rows.append(counts)
+
+    if not rows:
+        return pd.DataFrame(columns=["period", "term", "count"])
+
+    return (
+        pd.concat(rows, ignore_index=True)
+        .sort_values(["term", "period"])
+        .reset_index(drop=True)
+    )
 
 
 def aspect_pressure_table(long_df: pd.DataFrame) -> pd.DataFrame:

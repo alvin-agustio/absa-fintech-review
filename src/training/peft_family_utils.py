@@ -9,6 +9,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
 from peft import AdaLoraConfig, LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training
 from sklearn.metrics import classification_report
 from torch.utils.data import Dataset
@@ -187,6 +188,27 @@ def _resolve_compute_dtype() -> torch.dtype:
     return getattr(torch, QLORA_COMPUTE_DTYPE, torch.float16)
 
 
+def _replace_sequence_classifier_head(model) -> None:
+    """Replace quantized classification heads with a plain Linear layer.
+
+    For sequence classification, PEFT automatically wraps `classifier`/`score`
+    into `modules_to_save`. That wrapper can crash on bitsandbytes 4-bit
+    modules. Keeping the encoder quantized while restoring the task head to a
+    standard float32 Linear avoids that incompatibility.
+    """
+
+    for layer_name in ("classifier", "score"):
+        layer = getattr(model, layer_name, None)
+        if layer is None or not hasattr(layer, "in_features") or not hasattr(layer, "out_features"):
+            continue
+
+        use_bias = getattr(layer, "bias", None) is not None
+        replacement = nn.Linear(layer.in_features, layer.out_features, bias=use_bias)
+        replacement = replacement.to(device="cuda" if torch.cuda.is_available() else "cpu", dtype=torch.float32)
+        setattr(model, layer_name, replacement)
+        break
+
+
 def load_base_model(model_name: str, spec: PeftFamilySpec):
     common_kwargs = {
         "num_labels": 3,
@@ -217,6 +239,7 @@ def load_base_model(model_name: str, spec: PeftFamilySpec):
             raise RuntimeError(
                 "QLoRA gagal memuat model 4-bit. Pastikan bitsandbytes dan backend GPU yang dipakai kompatibel di droplet ini."
             ) from exc
+        _replace_sequence_classifier_head(model)
         return prepare_model_for_kbit_training(model)
 
     return AutoModelForSequenceClassification.from_pretrained(model_name, **common_kwargs)
