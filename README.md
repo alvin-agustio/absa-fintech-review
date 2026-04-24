@@ -22,6 +22,12 @@
   </em>
 </p>
 
+<p align="center">
+  <a href="https://huggingface.co/spaces/alvin-agustio/fintech-absa">
+    <img src="https://img.shields.io/badge/Live%20Demo-Hugging%20Face-yellow?style=for-the-badge&logo=huggingface&logoColor=black" alt="Live Demo on Hugging Face Spaces" />
+  </a>
+</p>
+
 </div>
 
 ---
